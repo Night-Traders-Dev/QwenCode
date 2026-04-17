@@ -635,9 +635,10 @@ class BrowserTranscriptMirror:
             document.body;
 
         const normalize = (s) => (s || '')
-            .replace(/ /g, ' ')
-            .replace(/[ \t]+/g, '')
-            .replace(/{3,}/g, '')
+            .replace(/\u00A0/g, ' ')
+            .replace(/\r\n?/g, '\n')
+            .replace(/[ \t]+/g, ' ')
+            .replace(/\n{3,}/g, '\n\n')
             .trim();
 
         const badLine = /^(New Chat|Search Chats|Community|Coder|Projects|All chats|Today|Auto|AI-generated content may not be accurate.?|How can I help you today??)$/i;
@@ -665,13 +666,11 @@ class BrowserTranscriptMirror:
 
             const raw = normalize(clone.innerText || clone.textContent || '');
             const lines = raw
-                .split('
-')
+                .split('\n')
                 .map(x => x.trim())
                 .filter(x => x && !badLine.test(x) && !skipLine.test(x));
 
-            return normalize(lines.join('
-'));
+            return normalize(lines.join('\n'));
         };
 
         const buttons = Array.from(document.querySelectorAll('button')).filter(isVisible);
@@ -763,8 +762,7 @@ class BrowserTranscriptMirror:
             let score = txt.length;
             if (/thinking/i.test(txt)) score -= 140;
             if (/temperature|forecast|humidity|wind|condition|conditions|air quality|precipitation|uv index|```|•/i.test(txt)) score += 90;
-            if (txt.split('
-').length >= 4) score += 30;
+            if (txt.split('\n').length >= 4) score += 30;
             if (/How can I help you today|AI-generated content may not be accurate|New Chat|Search Chats|Community|Projects|All chats/i.test(txt)) score -= 300;
 
             const r = el.getBoundingClientRect();
@@ -789,8 +787,8 @@ class BrowserTranscriptMirror:
         }
 
         answerCandidates.sort((a, b) => b.score - a.score);
-        let answerText = answerCandidates.length ? answerCandidates.text : '';
-        let answerMethod = answerCandidates.length ? answerCandidates.method : 'none';
+        let answerText = answerCandidates.length ? answerCandidates[0].text : '';
+        let answerMethod = answerCandidates.length ? answerCandidates[0].method : 'none';
 
         if (answerText && /thinking completed/i.test(answerText)) {
             const parts = answerText.split(/thinking completed(s*[›>])?/i);
@@ -855,8 +853,9 @@ class BrowserTranscriptMirror:
             if re.match(r"^AI-generated content may not be accurate.?$", line, re.I):
                 continue
             lines.append(line)
-        out = "".join(lines).strip()
-        out = re.sub(r"{3,}", "", out)
+        out = "\n".join(lines).strip()
+        out = re.sub(r"\n{3,}", "\n\n", out)
+        out = re.sub(r"[ \t]+", " ", out)
         return out
 
     def _strip_prompt_echo(self, text: str) -> str:
@@ -957,7 +956,7 @@ class BrowserTranscriptMirror:
         return renderer.answer_text or renderer.thinking_text
 
 
-# ── browser controller ────────────────────────────────────────────────────────# ── browser controller ────────────────────────────────────────────────────────
+# ── browser controller ────────────────────────────────────────────────────────
 class QwenBrowserController:
     SEL_TEXTAREA = "textarea"
     SEL_SEND_BTN = 'button[aria-label="Send"]'

@@ -14,3 +14,6 @@ src/ui/__pycache__/banner.cpython-313.pyc
 src/ui/__pycache__/live_render.cpython-313.pyc
 src/ui/__pycache__/rich_ui.cpython-313.pyc
 uv.lock
+src/memory/__pycache__/__init__.cpython-313.pyc
+src/memory/__pycache__/local_llm.cpython-313.pyc
+src/memory/__pycache__/store.cpython-313.pyc

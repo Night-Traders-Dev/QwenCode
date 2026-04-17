@@ -47,6 +47,7 @@ class BrowserTranscriptMirror:
             const raw = normalize(clone.innerText || clone.textContent || '');
             const cleaned = [];
             let lastBlank = false;
+            const seenLines = new Set();
 
             for (const part of raw.split('\n')) {
                 const line = part.trim();
@@ -60,6 +61,11 @@ class BrowserTranscriptMirror:
                 if (badLine.test(line) || skipLine.test(line)) {
                     continue;
                 }
+                // Skip duplicate lines
+                if (seenLines.has(line)) {
+                    continue;
+                }
+                seenLines.add(line);
                 cleaned.push(line);
                 lastBlank = false;
             }

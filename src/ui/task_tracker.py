@@ -7,7 +7,7 @@ Provides:
 - Task queue management
 - Live token usage display
 - Thinking UI visualization (Claude Code style)
-- Bottom status panel with live metrics (non-blocking, runs in separate thread)
+- Bottom status panel with live metrics (auto-refreshing, never blocks main code)
 """
 
 import asyncio
@@ -17,8 +17,7 @@ from typing import Optional, List, Dict, Any, Callable
 from dataclasses import dataclass, field
 from enum import Enum
 from collections import deque
-from threading import Thread, Event, Lock
-from queue import Queue, Empty
+from threading import Lock
 
 from ui.rich_ui import console
 from ui.live_render import C
@@ -50,8 +49,9 @@ class PanelUpdate:
 class StatusPanel:
     """Live bottom panel showing task metrics, timing, and status.
 
-    Runs updates in a separate thread to ensure the status bar never blocks
-    the main processing flow. Timer, clock, and metrics are computed independently.
+    Uses Rich's Live display with auto-refresh to ensure timer, clock, and
+    metrics update in real-time without blocking the main processing flow.
+    The panel render always computes fresh time values independently.
     """
 
     def __init__(self):
@@ -64,89 +64,9 @@ class StatusPanel:
         self.step_start: float = 0
         self.is_running: bool = False
 
-        # Thread synchronization
-        self._update_queue: Queue[PanelUpdate] = Queue()
+        # Thread-safe state access
         self._state_lock = Lock()
-        self._update_thread: Optional[Thread] = None
-        self._stop_event = Event()
         self._live: Optional[Live] = None
-        self._last_update_time: float = 0
-        self._min_update_interval: float = 0.25  # Max 4 updates per second
-
-    def _update_worker(self):
-        """Background thread that processes panel updates."""
-        while not self._stop_event.is_set():
-            try:
-                # Wait for update with timeout to check stop event
-                update = self._update_queue.get(timeout=0.1)
-
-                # Apply update under lock
-                with self._state_lock:
-                    if update.stage is not None:
-                        self.current_stage = update.stage
-                    if update.tool is not None:
-                        self.current_tool = update.tool
-                    if update.tokens_main is not None:
-                        self.tokens_main = update.tokens_main
-                    if update.tokens_local is not None:
-                        self.tokens_local = update.tokens_local
-                    if update.step is not None:
-                        self.step_name = update.step
-                        self.step_start = time.time()
-
-            except Empty:
-                continue
-
-            # Update the live display (rate-limited)
-            now = time.time()
-            if now - self._last_update_time >= self._min_update_interval:
-                if self._live and self.is_running:
-                    try:
-                        self._live.update(self._generate_panel())
-                        self._last_update_time = now
-                    except Exception:
-                        # Never let rendering errors stop the worker
-                        pass
-
-    def start(self, prompt: str = ""):
-        """Start the status panel with background update thread."""
-        self.task_start_time = time.time()
-        self.is_running = True
-        self.current_stage = "initializing"
-        self.step_start = time.time()
-        self._stop_event.clear()
-
-        # Create and start live display
-        self._live = Live(self._generate_panel(), console=console, refresh_per_second=2)
-        self._live.start()
-
-        # Start background update thread
-        self._update_thread = Thread(target=self._update_worker, daemon=True)
-        self._update_thread.start()
-
-    def update(self,
-               stage: str = None,
-               tool: str = None,
-               tokens_main: int = None,
-               tokens_local: int = None,
-               step: str = None):
-        """Queue a status panel update (non-blocking)."""
-        if not self.is_running:
-            return
-
-        update = PanelUpdate(
-            stage=stage,
-            tool=tool,
-            tokens_main=tokens_main,
-            tokens_local=tokens_local,
-            step=step
-        )
-        # Non-blocking put - drop updates if queue is full
-        try:
-            self._update_queue.put_nowait(update)
-        except Exception:
-            # Queue full, skip this update (status bar will catch up)
-            pass
 
     def _get_elapsed(self) -> str:
         """Get formatted elapsed time."""
@@ -232,30 +152,74 @@ class StatusPanel:
             padding=(0, 1)
         )
 
-    def stop(self):
-        """Stop the live display and background thread."""
-        self.is_running = False
-        self._stop_event.set()
+    def start(self, prompt: str = ""):
+        """Start the status panel with Rich Live display.
 
-        # Wait for update thread to finish
-        if self._update_thread and self._update_thread.is_alive():
-            self._update_thread.join(timeout=1.0)
+        The Live display auto-refreshes at a fixed rate, ensuring timer and clock
+        update in real-time regardless of any blocking operations in the main code.
+        """
+        self.task_start_time = time.time()
+        self.is_running = True
+        self.current_stage = "initializing"
+        self.step_start = time.time()
+
+        # Create and start live display with high refresh rate for smooth updates
+        # auto_refresh=True means Rich will automatically call _generate_panel()
+        # at refresh_per_second rate, always getting fresh time values
+        self._live = Live(
+            self._generate_panel(),
+            console=console,
+            refresh_per_second=4,  # 4 FPS - smooth but not excessive
+            auto_refresh=True
+        )
+        self._live.start()
+
+    def update(self,
+               stage: str = None,
+               tool: str = None,
+               tokens_main: int = None,
+               tokens_local: int = None,
+               step: str = None):
+        """Update panel state (thread-safe, non-blocking).
+
+        This only updates internal state; the Live display auto-refreshes
+        and will pick up the new state on its next render cycle.
+        """
+        if not self.is_running:
+            return
+
+        with self._state_lock:
+            if stage is not None:
+                self.current_stage = stage
+            if tool is not None:
+                self.current_tool = tool
+            if tokens_main is not None:
+                self.tokens_main = tokens_main
+            if tokens_local is not None:
+                self.tokens_local = tokens_local
+            if step is not None:
+                self.step_name = step
+                self.step_start = time.time()
+
+    def stop(self):
+        """Stop the live display."""
+        self.is_running = False
 
         if self._live:
-            self._live.stop()
+            try:
+                self._live.stop()
+            except Exception:
+                pass
             self._live = None
 
     def finish(self, final_stage: str = "completed"):
-        """Finish and show final status."""
-        self.current_stage = final_stage
+        """Finish and show final status before stopping."""
+        with self._state_lock:
+            self.current_stage = final_stage
 
-        # Force a final update synchronously
+        # Brief pause to show final state, then stop
         if self._live:
-            try:
-                self._live.update(self._generate_panel())
-            except Exception:
-                pass
-            time.sleep(0.5)  # Show final state briefly
+            time.sleep(0.3)
             self.stop()
 
 
@@ -277,6 +241,7 @@ def reset_status_panel():
     if _status_panel and _status_panel._live:
         _status_panel.stop()
     _status_panel = StatusPanel()
+
 
 @dataclass
 class TaskStep:

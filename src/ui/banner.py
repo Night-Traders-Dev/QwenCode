@@ -1,4 +1,11 @@
 # ── banners ───────────────────────────────────────────────────────────────────
+from datetime import datetime
+from pathlib import Path
+from rich.panel import Panel
+from rich import box
+from ui.rich_ui import console
+from ui.live_render import C, VERSION
+
 def print_banner(cfg: dict):
     ts = datetime.now().strftime("%Y-%m-%d %H:%M")
     console.print(Panel(

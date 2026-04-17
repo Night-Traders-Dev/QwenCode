@@ -1,12 +1,11 @@
-try:
-    from openai import OpenAI, APIError, APIConnectionError
-except ImportError:
-    _MISSING.append("openai")
-
-if _MISSING:
-    print(f"[error] Missing packages: {', '.join(_MISSING)}")
-    print(f"  pip install {' '.join(_MISSING)}")
-    sys.exit(1)
+import json
+import sys
+from openai import OpenAI, APIError, APIConnectionError
+from tools.definitions import TOOLS
+from tools.tools import dispatch_tool, print_tool_call, print_tool_result
+from ui.rich_ui import console
+from ui.live_render import C
+from config.config import MAX_TOOL_ITERS
 
 # ── streaming completion (API mode) ───────────────────────────────────────────
 def stream_completion(
@@ -15,7 +14,7 @@ def stream_completion(
     full_text = ""
     tool_call_accum: dict[int, dict] = {}
 
-    console.print(f"\n[{C['brand']}]◆ Qwen Coder[/] ", end="")
+    console.print(f"\n[{C['brand']}◆ Qwen Coder[/] ", end="")
 
     with client.chat.completions.create(
         model=cfg["model"],
@@ -85,7 +84,7 @@ def agentic_turn_api(
         }
         messages.append(assistant_msg)
 
-        console.print(f"\n[{C['accent']}]⚙  Tools[/]")
+        console.print(f"\n[{C['accent']}⚙  Tools[/]")
         tool_results = []
         for tc in tool_calls:
             try:

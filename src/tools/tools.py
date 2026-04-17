@@ -1,6 +1,13 @@
+import json
+import re
+import subprocess
+from pathlib import Path
 from typing import Optional
 from config.config import MAX_OUTPUT_CHARS
-
+from ui.rich_ui import console
+from ui.live_render import C
+from rich.markdown import Markdown
+from rich.syntax import Syntax
 
 
 # ── tool implementations ──────────────────────────────────────────────────────

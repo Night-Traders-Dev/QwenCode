@@ -1,13 +1,7 @@
 import re
 from pathlib import Path
 from textwrap import TextWrapper
-from tools.definitions import TOOLS
-from tools.tools import dispatch_tool, print_tool_call, print_tool_result
 from ui.rich_ui import console
-from config.config import MISSING, CONFIG_DIR, CONFIG_FILE, HISTORY_FILE, DASHSCOPE_BASE_URL, DEFAULT_MODEL, LOCAL_BASE_URL, LOCAL_API_KEY
-     
-
-
 
 # ── colour palette ────────────────────────────────────────────────────────────
 C = {
@@ -20,6 +14,8 @@ C = {
     "tool":   "#34D399",
     "code":   "#F59E0B",
 }
+
+VERSION = "0.5.0"
 
 
 # ── live renderer ─────────────────────────────────────────────────────────────

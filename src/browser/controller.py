@@ -3,8 +3,10 @@ import subprocess
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
-from ui.live_render import LiveRenderer
 from playwright.async_api import async_playwright, BrowserContext, Page
+from config.config import BROWSER_DATA_DIR
+from ui.rich_ui import console
+from ui.live_render import C, LiveRenderer
 
 
 # ── browser controller ────────────────────────────────────────────────────────
@@ -189,7 +191,7 @@ class QwenBrowserController:
                     pass
 
             tool_prompt = "".join(result_parts)
-            console.print(f"[{C['brand']}]◆ Qwen Coder (browser)[/] ", end="")
+            console.print(f"[{C['brand']}◆ Qwen Coder (browser)[/] ", end="")
             mirror = BrowserTranscriptMirror(page, tool_prompt)
             await mirror.snapshot()
             await self._submit(page, tool_prompt)
@@ -235,4 +237,3 @@ class QwenBrowserController:
                 break
 
         return pending
-

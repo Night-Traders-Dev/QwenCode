@@ -1,15 +1,20 @@
+import json
 from typing import Optional
-from config.config import HISTORY_FILE
+from prompt_toolkit import PromptSession
+from prompt_toolkit.history import FileHistory
+from prompt_toolkit.styles import Style as PTStyle
+from prompt_toolkit.formatted_text import HTML
+from prompt_toolkit.key_binding import KeyBindings
+from rich.table import Table
+from rich.panel import Panel
+from config.config import HISTORY_FILE, save_config
+from tools.definitions import TOOLS
 from ui.rich_ui import console
 from ui.live_render import C
-from browser.session import build_prompt_session
-
-
-
 
 # ── prompt session ────────────────────────────────────────────────────────────
 def print_help():
-    t = Table(box=box.SIMPLE, show_header=False, padding=(0, 2))
+    t = Table(box="SIMPLE", show_header=False, padding=(0, 2))
     t.add_column(style=C["accent"])
     t.add_column(style=C["dim"])
     for k, v in [
@@ -54,7 +59,7 @@ def handle_slash(
                 f"[{C['dim']}]Current model:[/] [{C['accent']}]{cfg['model']}[/]"
             )
     elif verb == "/tools":
-        t = Table(box=box.SIMPLE, show_header=True,
+        t = Table(box="SIMPLE", show_header=True,
                   header_style=C["brand"])
         t.add_column("Tool",        style=C["tool"])
         t.add_column("Description", style=C["dim"])

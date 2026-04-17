@@ -33,36 +33,33 @@ import argparse
 import asyncio
 import json
 import sys
-
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
-from tools.definitions import TOOLS
-from config.config import MISSING, HISTORY_FILE, LOCAL_BASE_URL, LOCAL_API_KEY, load_config, save_config
-from browser.session import browser_session
 
+from openai import OpenAI, APIError, APIConnectionError
+from rich.panel import Panel
+from rich.table import Table
+from rich import box
+from prompt_toolkit import PromptSession
+from prompt_toolkit.history import FileHistory
+from prompt_toolkit.styles import Style as PTStyle
+from prompt_toolkit.formatted_text import HTML
+from prompt_toolkit.key_binding import KeyBindings
+from playwright.async_api import async_playwright, BrowserContext, Page
+
+from tools.definitions import TOOLS
+from tools.tools import dispatch_tool, print_tool_call, print_tool_result
+from tools.api import agentic_turn_api
+from config.config import MISSING, HISTORY_FILE, LOCAL_BASE_URL, LOCAL_API_KEY, load_config, save_config, BROWSER_DATA_DIR, MAX_TOOL_ITERS
+from config.prompt import build_prompt_session, get_input, handle_slash
+from browser.session import browser_session
+from ui.rich_ui import console
+from ui.live_render import C
+from ui.banner import print_banner
 
 
 # ── dependency check ──────────────────────────────────────────────────────────
-try:
-    from openai import OpenAI, APIError, APIConnectionError
-except ImportError:
-    MISSING.append("openai")
-try:
-    from rich.panel import Panel
-    from rich.table import Table
-    from rich import box
-except ImportError:
-    MISSING.append("rich")
-try:
-    from prompt_toolkit import PromptSession
-    from prompt_toolkit.history import FileHistory
-    from prompt_toolkit.styles import Style as PTStyle
-    from prompt_toolkit.formatted_text import HTML
-    from prompt_toolkit.key_binding import KeyBindings
-except ImportError:
-    MISSING.append("prompt_toolkit")
-
 if MISSING:
     print(f"[error] Missing packages: {', '.join(MISSING)}")
     print(f"  pip install {' '.join(MISSING)}")
@@ -133,8 +130,6 @@ def import_cookies_from_json(cookie_file: str, data_dir: Path):
     console.print(
         f"[{C['warn']}]Run python3 qwencode.py --browser to use the imported session.[/]"
     )
-
-
 
 
 

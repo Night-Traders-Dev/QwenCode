@@ -10,15 +10,25 @@ from prompt_toolkit.completion import Completer, Completion
 from rich.table import Table
 from rich.panel import Panel
 from rich.box import SIMPLE
-from config.config import HISTORY_FILE, save_config
+from config.config import HISTORY_FILE, save_config, LOCAL_MODEL
 from tools.definitions import TOOLS
 from ui.rich_ui import console
 from ui.live_render import C
 
+try:
+    from memory.store import MemoryStore
+    from memory.local_llm import get_local_llm
+    MEMORY_AVAILABLE = True
+except ImportError:
+    MEMORY_AVAILABLE = False
+    MemoryStore = None
+    get_local_llm = None
+
 # ── Custom completer for slash commands ───────────────────────────────────────
 class SlashCompleter(Completer):
     SLASH_COMMANDS = [
-        "/help", "/clear", "/model", "/tools", "/config", "/exit"
+        "/help", "/clear", "/model", "/tools", "/config", "/exit",
+        "/memory", "/audit", "/local"
     ]
 
     def get_completions(self, document, complete_event):
@@ -41,6 +51,9 @@ def print_help():
         ("/model [name]",      "Show or change the active model"),
         ("/tools",             "List available tools"),
         ("/config",            "Show active configuration"),
+        ("/memory",            "Show memory status and contents"),
+        ("/audit [text]",      "Audit text using local LLM"),
+        ("/local [text]",      "Send text to local LLM"),
         ("/exit",              "Quit the session"),
         ("Ctrl-D",             "Quit"),
         ("Ctrl-C",             "Cancel current input"),
@@ -51,7 +64,7 @@ def print_help():
     console.print(Panel(t, title="Commands", border_style=C["dim"]))
 
 def handle_slash(
-    cmd: str, cfg: dict, messages: list
+    cmd: str, cfg: dict, messages: list, memory_store=None
 ) -> tuple[bool, list]:
     parts = cmd.strip().split(maxsplit=1)
     verb  = parts[0].lower()
@@ -64,6 +77,8 @@ def handle_slash(
         print_help()
     elif verb == "/clear":
         console.print(f"[{C['ok']}]History cleared.[/]")
+        if memory_store and MEMORY_AVAILABLE:
+            memory_store.clear_conversation(cfg.get("session_id", "default"))
         return True, []
     elif verb == "/model":
         if arg:
@@ -94,6 +109,74 @@ def handle_slash(
             Panel(json.dumps(safe, indent=2), title="Config",
                   border_style=C["dim"])
         )
+    elif verb == "/memory":
+        if not MEMORY_AVAILABLE:
+            console.print(f"[{C['warn']}]Memory module not available[/]")
+        elif memory_store is None:
+            console.print(f"[{C['warn']}]Memory store not initialized[/]")
+        else:
+            session_id = cfg.get("session_id", "default")
+            conv = memory_store.get_conversation(session_id, limit=10)
+            memories = memory_store.get_all_memories()
+
+            t = Table(box=SIMPLE, show_header=False)
+            t.add_column(style=C["accent"])
+            t.add_column(style=C["dim"])
+            t.add_row("Session ID:", session_id)
+            t.add_row("Messages stored:", str(len(conv)))
+            t.add_row("Memories:", str(len(memories)))
+
+            if arg == "show" and conv:
+                console.print(Panel(t, title="Memory Status", border_style=C["dim"]))
+                console.print("\n[bold]Recent messages:[/]")
+                for msg in conv[-5:]:
+                    role = msg.get('role', 'unknown')
+                    content = msg.get('content', '')[:100]
+                    console.print(f"  [{C['dim']}]{role}:[/] {content}...")
+            else:
+                console.print(Panel(t, title="Memory Status", border_style=C["dim"]))
+                console.print(f"[{C['dim']}]Use /memory show to see recent messages[/]")
+    elif verb == "/audit":
+        if not MEMORY_AVAILABLE or not get_local_llm:
+            console.print(f"[{C['warn']}]Local LLM not available[/]")
+        else:
+            local_llm = get_local_llm(cfg.get("local_model", LOCAL_MODEL))
+            if not local_llm.is_available():
+                console.print(f"[{C['warn']}]Local LLM ({local_llm.model}) not running. Start Ollama first.[/]")
+            elif arg:
+                audit_result = local_llm.audit_prompt(arg)
+                console.print(f"\n[{C['brand']}]Prompt Audit Results:[/]")
+                console.print(f"  Score: {audit_result.get('score', 'N/A')}/10")
+                console.print(f"  Safe: {audit_result.get('safe', 'N/A')}")
+                console.print(f"  Actionable: {audit_result.get('actionable', 'N/A')}")
+                if audit_result.get('issues'):
+                    console.print(f"  [{C['warn']}]Issues:[/]")
+                    for issue in audit_result['issues']:
+                        console.print(f"    - {issue}")
+                if audit_result.get('suggestions'):
+                    console.print(f"  [{C['ok']}]Suggestions:[/]")
+                    for sug in audit_result['suggestions']:
+                        console.print(f"    - {sug}")
+            else:
+                console.print(f"[{C['dim']}]Usage: /audit <text to audit>[/]")
+    elif verb == "/local":
+        if not MEMORY_AVAILABLE or not get_local_llm:
+            console.print(f"[{C['warn']}]Local LLM not available[/]")
+        else:
+            local_llm = get_local_llm(cfg.get("local_model", LOCAL_MODEL))
+            if not local_llm.is_available():
+                console.print(f"[{C['warn']}]Local LLM ({local_llm.model}) not running. Start Ollama first.[/]")
+            elif arg:
+                console.print(f"\n[{C['brand']}]Local LLM ({local_llm.model}):[/]")
+                try:
+                    response = local_llm.chat_complete([
+                        {"role": "user", "content": arg}
+                    ])
+                    console.print(response)
+                except Exception as e:
+                    console.print(f"[{C['error']}]Error: {e}[/]")
+            else:
+                console.print(f"[{C['dim']}]Usage: /local <text to send to local LLM>[/]")
     else:
         console.print(
             f"[{C['warn']}]Unknown command: {verb}[/]  (try /help)"

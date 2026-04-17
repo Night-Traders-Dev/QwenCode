@@ -1,43 +1,16 @@
-<<<<<<< HEAD
-```
-# Python
-=======
-# Python compiled files
->>>>>>> cca1f73 (chore: add additional Python cache directories to gitignore)
-__pycache__/
-src/__pycache__/
-src/browser/__pycache__/
-src/config/__pycache__/
-src/tools/__pycache__/
-src/ui/__pycache__/
-*.pyc
-*.pyo
-*.pyd
-
-# Dependencies
-.venv/
-venv/
-env/
-.env
-.env.local
-.env.*
-
-# Build artifacts
-dist/
-build/
-*.egg-info/
-
-# Logs
-*.log
-
-<<<<<<< HEAD
-# Temporary files
-*.tmp
-*.swp
-*~
-```
-=======
-# Editors
-.vscode/
-.idea/
->>>>>>> cca1f73 (chore: add additional Python cache directories to gitignore)
+src/browser/__pycache__/__init__.cpython-313.pyc
+src/browser/__pycache__/controller.cpython-313.pyc
+src/browser/__pycache__/session.cpython-313.pyc
+src/browser/__pycache__/transcript_mirror.cpython-313.pyc
+src/config/__pycache__/__init__.cpython-313.pyc
+src/config/__pycache__/config.cpython-313.pyc
+src/config/__pycache__/prompt.cpython-313.pyc
+src/tools/__pycache__/api.cpython-313.pyc
+src/tools/__pycache__/__init__.cpython-313.pyc
+src/tools/__pycache__/definitions.cpython-313.pyc
+src/tools/__pycache__/tools.cpython-313.pyc
+src/ui/__pycache__/__init__.cpython-313.pyc
+src/ui/__pycache__/banner.cpython-313.pyc
+src/ui/__pycache__/live_render.cpython-313.pyc
+src/ui/__pycache__/rich_ui.cpython-313.pyc
+uv.lock

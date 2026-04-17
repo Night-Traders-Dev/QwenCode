@@ -43,8 +43,14 @@ class LiveRenderer:
             return ""
         if not old:
             return new
+        if new == old:
+            return ""
         if new.startswith(old):
             return new[len(old):]
+        # Handle case where new text is shorter (normalization changed)
+        # Return the entire new text so it gets re-printed cleanly
+        if len(new) < len(old):
+            return new
         # If texts diverge, find common prefix and return only the new part
         # This handles cases where normalization or whitespace differs slightly
         for i in range(min(len(old), len(new)), 0, -1):
@@ -62,7 +68,8 @@ class LiveRenderer:
         thinking_text = thinking_text or ""
         answer_text = answer_text or ""
 
-        if thinking_text != self.thinking_text:
+        # Only print thinking delta if it actually changed
+        if thinking_text and thinking_text != self.thinking_text:
             delta = self._delta(self.thinking_text, thinking_text)
             if delta:
                 if not self._thinking_header:
@@ -76,7 +83,8 @@ class LiveRenderer:
             console.print(f"[{C['dim']}]Thinking completed[/]")
             self._thinking_done = True
 
-        if answer_text != self.answer_text:
+        # Only print answer delta if it actually changed
+        if answer_text and answer_text != self.answer_text:
             delta = self._delta(self.answer_text, answer_text)
             if delta:
                 if not self._answer_started:

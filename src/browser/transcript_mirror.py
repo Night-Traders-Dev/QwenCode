@@ -307,8 +307,8 @@ class BrowserTranscriptMirror:
         renderer: LiveRenderer,
         timeout_ms: int = 120_000,
         poll_interval: float = 0.15,
-        answer_stable_seconds: float = 3.5,
-        post_thinking_grace_seconds: float = 4.0,
+        answer_stable_seconds: float = 2.0,
+        post_thinking_grace_seconds: float = 1.5,
     ) -> str:
         renderer.reset()
         start = time.monotonic()
@@ -317,6 +317,8 @@ class BrowserTranscriptMirror:
         started = False
         last = dict(self._baseline)
         last_answer_len = 0
+        stable_count = 0  # Count consecutive polls with no change
+        required_stable_polls = int(answer_stable_seconds / poll_interval)
 
         while (time.monotonic() - start) * 1000 < timeout_ms:
             state = self._extract_state(await self._probe())
@@ -342,7 +344,7 @@ class BrowserTranscriptMirror:
                 # This prevents re-printing when the same content is detected
                 answer_growing = len(state["answer_text"]) > last_answer_len
                 thinking_changed = state["thinking_text"] != last["thinking_text"]
-                
+
                 if answer_growing or thinking_changed or not last_answer_len:
                     renderer.update(
                         thinking_text=state["thinking_text"],
@@ -354,23 +356,23 @@ class BrowserTranscriptMirror:
                 if changed:
                     last_change = now
                     last = dict(state)
+                    stable_count = 0  # Reset stable counter on any change
+                else:
+                    stable_count += 1
 
-                if state["answer_text"]:
-                    waiting_after_thinking = None
-                    if (now - last_change) >= answer_stable_seconds and not state["busy"]:
+                # Check if we have a complete answer and it's been stable
+                if state["answer_text"] and not state["busy"]:
+                    if stable_count >= required_stable_polls:
+                        break
+                elif state["thinking_text"] and state["thinking_done"] and not state["busy"]:
+                    if waiting_after_thinking is None:
+                        waiting_after_thinking = now
+                    elif (now - waiting_after_thinking) >= post_thinking_grace_seconds:
                         break
                 else:
-                    if state["thinking_text"] and state["thinking_done"] and not state["busy"]:
-                        if waiting_after_thinking is None:
-                            waiting_after_thinking = now
-                        elif (now - waiting_after_thinking) >= post_thinking_grace_seconds:
-                            break
-                    else:
-                        waiting_after_thinking = None
+                    waiting_after_thinking = None
 
             await asyncio.sleep(poll_interval)
 
         renderer.finish()
         return renderer.answer_text or renderer.thinking_text
-
-

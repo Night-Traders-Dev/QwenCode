@@ -7,8 +7,6 @@ from playwright.async_api import async_playwright, BrowserContext, Page
 from config.config import BROWSER_DATA_DIR
 from ui.rich_ui import console
 from ui.live_render import C, LiveRenderer
-from tools.tools import dispatch_tool, print_tool_call, print_tool_result
-from browser.transcript_mirror import BrowserTranscriptMirror
 
 
 # ── browser controller ────────────────────────────────────────────────────────
@@ -173,6 +171,12 @@ class QwenBrowserController:
                 self._renderer,
                 timeout_ms=self.RESPONSE_TIMEOUT_MS,
             )
+
+            # Check if we got a valid response (not empty due to timeout/hang)
+            if not final_text and not self._renderer.answer_text and not self._renderer.thinking_text:
+                console.print(f"\n[{C['warn']}]⚠  No response received from model.[/]")
+                return "", tool_history
+
             console.print()
 
             pending = await self._collect_pending_tool_calls(page)
@@ -201,7 +205,7 @@ class QwenBrowserController:
         console.print(
             f"[{C['warn']}]⚠  Reached max tool rounds ({self.MAX_TOOL_ROUNDS}) in browser mode.[/]"
         )
-        return self._renderer.answer_text or self._renderer.thinking_text or "" 
+        return self._renderer.answer_text or self._renderer.thinking_text or ""
     async def _submit(self, page: "Page", text: str):
         textarea = await page.wait_for_selector(self.SEL_TEXTAREA, timeout=10_000)
         await textarea.fill(text)

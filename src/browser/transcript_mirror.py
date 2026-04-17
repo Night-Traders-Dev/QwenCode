@@ -1,10 +1,8 @@
 import re
 import time
 import asyncio
-from pathlib import Path
 from ui.live_render import LiveRenderer
-from tools.definitions import TOOLS
-from tools.tools import dispatch_tool, print_tool_call, print_tool_result
+
 
 # ── transcript mirror ─────────────────────────────────────────────────────────
 class BrowserTranscriptMirror:

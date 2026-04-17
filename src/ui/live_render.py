@@ -3,17 +3,9 @@ from pathlib import Path
 from textwrap import TextWrapper
 from tools.definitions import TOOLS
 from tools.tools import dispatch_tool, print_tool_call, print_tool_result
-
-try:
-    from rich.console import Console
-    from rich.markdown import Markdown
-    from rich.panel import Panel
-    from rich.syntax import Syntax
-    from rich.table import Table
-    from rich.text import Text
-    from rich import box
-except ImportError:
-    _MISSING.append("rich")
+from ui.rich_ui import console
+from config.config import _MISSING, CONFIG_DIR, CONFIG_FILE, HISTORY_FILE, DASHSCOPE_BASE_URL, DEFAULT_MODEL, LOCAL_BASE_URL, LOCAL_API_KEY
+     
 
 
 

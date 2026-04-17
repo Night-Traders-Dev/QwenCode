@@ -105,17 +105,7 @@ try:
 except ImportError:
     BROWSER_AVAILABLE = False
 
-# ── constants ─────────────────────────────────────────────────────────────────
-VERSION          = "0.5.0"
-CONFIG_DIR       = Path.home() / ".qwencode"
-CONFIG_FILE      = CONFIG_DIR / "config.json"
-HISTORY_FILE     = CONFIG_DIR / "history"
-DASHSCOPE_BASE_URL = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
-DEFAULT_MODEL      = "qwen3-coder-plus"
-LOCAL_BASE_URL     = "http://localhost:11434/v1"
-LOCAL_API_KEY      = "ollama"
 
-MAX_TOOL_ITERS   = 20
 
 SYSTEM_PROMPT = """
 You are Qwen Coder, an expert AI software engineer running inside a terminal.

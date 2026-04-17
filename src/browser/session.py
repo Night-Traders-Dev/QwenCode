@@ -1,12 +1,6 @@
-import re
-import asyncio
 from pathlib import Path
 from browser.controller import QwenBrowserController
-
-
-CONFIG_DIR       = Path.home() / ".qwencode"
-
-BROWSER_DATA_DIR = CONFIG_DIR / "browser_data"
+from config.config import _MISSING, CONFIG_DIR, CONFIG_FILE, HISTORY_FILE, DASHSCOPE_BASE_URL, DEFAULT_MODEL, LOCAL_BASE_URL, LOCAL_API_KEY
 
 
 

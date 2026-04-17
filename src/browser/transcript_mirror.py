@@ -36,13 +36,29 @@ class BrowserTranscriptMirror:
         const cleanText = (el) => {
             if (!el) return '';
             const clone = el.cloneNode(true);
+
+            clone.querySelectorAll('a[href]').forEach(link => {
+                const label = normalize(link.innerText || link.textContent || '');
+                const href = (link.getAttribute('href') || '').trim();
+                const replacementText = label && href
+                    ? `${label} (${href})`
+                    : (label || href || '');
+                link.replaceWith(document.createTextNode(replacementText ? ` ${replacementText} ` : ' '));
+            });
+
             clone.querySelectorAll(
-                'textarea,input,button,a[href],nav,aside,header,footer,script,style,svg,' +
+                'textarea,input,button,nav,aside,header,footer,script,style,svg,' +
                 '[contenteditable="true"],[role="textbox"],' +
                 '[class*="source"],[class*="cite"],[class*="reference"],' +
                 '[class*="toolbar"],[class*="sidebar"],[class*="search"],' +
                 '[class*="action"],[class*="feedback"]'
-            ).forEach(n => n.remove());
+            ).forEach(n => {
+                const tag = (n.tagName || '').toLowerCase();
+                const sep = ['div', 'p', 'section', 'article', 'li', 'ul', 'ol', 'table', 'tr', 'td', 'th', 'br'].includes(tag)
+                    ? '\n'
+                    : ' ';
+                n.replaceWith(document.createTextNode(sep));
+            });
 
             const raw = normalize(clone.innerText || clone.textContent || '');
             const cleaned = [];
@@ -315,6 +331,7 @@ class BrowserTranscriptMirror:
         poll_interval: float = 0.15,
         answer_stable_seconds: float = 2.0,
         post_thinking_grace_seconds: float = 1.5,
+        render_output: bool = True,
     ) -> str:
         renderer.reset()
         start = time.monotonic()
@@ -380,5 +397,5 @@ class BrowserTranscriptMirror:
 
             await asyncio.sleep(poll_interval)
 
-        renderer.finish()
+        renderer.finish(render_output=render_output)
         return renderer.answer_text or renderer.thinking_text

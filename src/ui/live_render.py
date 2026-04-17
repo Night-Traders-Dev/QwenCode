@@ -2,6 +2,8 @@ import re
 from pathlib import Path
 from textwrap import TextWrapper
 from ui.rich_ui import console
+from rich.align import Align
+from rich import box
 from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.text import Text
@@ -28,6 +30,54 @@ C = {
 }
 
 VERSION = "0.0.1"
+
+
+def normalize_markdown(text: str) -> str:
+    """Clean extracted model output into readable markdown-ish prose."""
+    text = (text or "").replace("\u00A0", " ")
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
+    text = re.sub(r"[ \t]+", " ", text)
+    text = re.sub(r"[ \t]+\n", "\n", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    text = re.sub(r"(?<!\n)(#{1,6}\s)", r"\n\1", text)
+    text = re.sub(r"(?<!\n)([-*]\s)", r"\n\1", text)
+    text = re.sub(r"(?<!\n)(\d+\.\s)", r"\n\1", text)
+    text = re.sub(r"(?<=[A-Za-z0-9\)])(\[[^\]]+\]\([^)]+\))", r" \1", text)
+    text = re.sub(r"(\[[^\]]+\]\([^)]+\))(?=[A-Za-z0-9])", r"\1 ", text)
+
+    if "```" not in text and "\n\n" not in text and text.count("\n") < 2 and len(text) > 280:
+        sentences = re.split(r"(?<=[.!?])\s+(?=[A-Z])", text)
+        if 3 <= len(sentences) <= 24:
+            text = "\n\n".join(
+                " ".join(sentences[idx: idx + 2]).strip()
+                for idx in range(0, len(sentences), 2)
+                if " ".join(sentences[idx: idx + 2]).strip()
+            )
+
+    return text.strip()
+
+
+def render_response(text: str, title: str = "Response"):
+    """Render assistant output in a readable, width-aware container."""
+    cleaned = normalize_markdown(text)
+    if not cleaned:
+        return
+
+    terminal_width = max(console.size.width, 60)
+    panel_width = min(max(terminal_width - 4, 56), 100)
+    panel = Panel(
+        Markdown(cleaned, code_theme="monokai"),
+        title=f"[{C['brand']}]{title}[/]",
+        border_style=C["dim"],
+        box=box.ROUNDED,
+        padding=(0, 1),
+        width=panel_width,
+    )
+
+    if panel_width < terminal_width - 1:
+        console.print(Align.center(panel))
+    else:
+        console.print(panel)
 
 
 # ── live renderer ─────────────────────────────────────────────────────────────
@@ -145,7 +195,7 @@ class LiveRenderer:
             self._last_answer_len = len(answer_text)
             self._answer_started = True
 
-    def finish(self):
+    def finish(self, render_output: bool = True):
         """Finish rendering and display final formatted output."""
         # Display thinking status if present
         if self.thinking_text:
@@ -154,7 +204,7 @@ class LiveRenderer:
                 console.print(f"[{C['dim']}]✓ Thinking completed[/]\n", style=C["dim"])
 
         # Render the complete answer as markdown for professional formatting
-        if self.answer_text:
+        if render_output and self.answer_text:
             # Clean up any duplicate content
             cleaned = self._clean_duplicates(self.answer_text)
-            console.print(Markdown(cleaned))
+            render_response(cleaned)

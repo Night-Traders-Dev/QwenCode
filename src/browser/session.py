@@ -1,10 +1,12 @@
 from pathlib import Path
+import hashlib
+import json
 import asyncio
 import time
 from browser.controller import QwenBrowserController
 from config.config import BROWSER_DATA_DIR, MEMORY_DIR
 from ui.rich_ui import console
-from ui.live_render import C
+from ui.live_render import C, render_response
 from ui.banner import print_banner_browser
 from config.prompt import build_prompt_session, get_input_async, handle_slash
 
@@ -43,10 +45,16 @@ async def browser_session(cfg: dict, headless: bool = False):
     # Initialize memory store
     memory_store = None
     local_llm_client = None
+    memory_status = None
     if MEMORY_AVAILABLE and MemoryStore:
         try:
             db_url = cfg.get("memory_db_url", "")
-            memory_store = MemoryStore(db_url=db_url if db_url else None)
+            memory_store = MemoryStore(
+                db_url=db_url if db_url else None,
+                backend=cfg.get("memory_backend", "auto"),
+                require_postgres=cfg.get("require_postgres", False),
+            )
+            memory_status = memory_store.get_status()
             # Get or create session
             memory_store.get_or_create_session(
                 cfg.get("session_id", "default"),
@@ -65,6 +73,14 @@ async def browser_session(cfg: dict, headless: bool = False):
     try:
         await controller.ensure_logged_in()
         print_banner_browser(cfg)
+        if memory_status:
+            if memory_status["backend"] == "postgresql":
+                console.print(f"[{C['ok']}]Memory backend:[/] PostgreSQL")
+            else:
+                reason = memory_status.get("fallback_reason") or "automatic fallback"
+                console.print(f"[{C['warn']}]Memory backend:[/] file fallback ({reason})")
+        if local_llm_client:
+            console.print(f"[{C['ok']}]Local LLM:[/] {local_llm_client.model}")
         session = build_prompt_session()
 
         while True:
@@ -85,6 +101,23 @@ async def browser_session(cfg: dict, headless: bool = False):
 
             # Create task for tracking
             task_id = f"task_{int(time.time() * 1000)}"
+            session_id = cfg.get("session_id", "default")
+            tool_history = []
+            raw_response = ""
+            audit_details = None
+            assistant_tokens = 0
+
+            if memory_store:
+                try:
+                    memory_store.add_message(
+                        session_id,
+                        "user",
+                        user_input,
+                        model="user",
+                        metadata={"task_id": task_id, "kind": "user_prompt"},
+                    )
+                except Exception as e:
+                    console.print(f"[{C['warn']}]Could not persist user prompt: {e}[/]")
 
             if MEMORY_AVAILABLE and Task and local_llm_client and cfg.get("audit_enabled", True):
                 # Run with full audit pipeline
@@ -95,16 +128,23 @@ async def browser_session(cfg: dict, headless: bool = False):
                 panel = get_status_panel()
 
                 async def main_task():
+                    nonlocal tool_history, raw_response, assistant_tokens
                     console.print(f"\n[{C['brand']}]◆ Qwen Coder (browser)[/] ", end="")
-                    result_text, _tool_history = await controller.send_prompt_and_get_response(user_input)
+                    result_text, tool_history = await controller.send_prompt_and_get_response(
+                        user_input,
+                        render_output=False,
+                    )
+                    raw_response = result_text
                     # Estimate tokens from response
                     if result_text:
                         estimated_tokens = max(1, len(result_text) // 4)
                         tracker.add_main(estimated_tokens)
+                        assistant_tokens = tracker.main_tokens
                         panel.update(tokens_main=tracker.main_tokens)
                     return result_text
 
                 async def audit_task(result):
+                    nonlocal audit_details, assistant_tokens
                     if local_llm_client and local_llm_client.is_available():
                         # First format the result for professional display
                         panel.update(stage="formatting", step="Formatting with local LLM")
@@ -113,20 +153,11 @@ async def browser_session(cfg: dict, headless: bool = False):
                         # Then audit the formatted result
                         panel.update(stage="auditing", step="Auditing response quality")
                         audit_result = local_llm_client.audit_response(formatted_result, user_input)
-
-                        # Store in memory
-                        if memory_store:
-                            memory_store.set_memory(f"last_audit_{task_id}", audit_result)
-                            memory_store.add_message(
-                                cfg.get("session_id", "default"),
-                                "assistant",
-                                formatted_result,
-                                model=cfg.get("local_model"),
-                                tokens_used=tracker.local_tokens
-                            )
+                        audit_details = audit_result
 
                         # Update token count
                         tracker.add_local(len(formatted_result) // 4)
+                        assistant_tokens = tracker.total
                         panel.update(tokens_local=tracker.local_tokens)
 
                         # Return formatted result as the actual response
@@ -138,21 +169,132 @@ async def browser_session(cfg: dict, headless: bool = False):
 
                 # Display the professionally formatted result
                 if task.result:
-                    from rich.markdown import Markdown
                     rendered = task.result if isinstance(task.result, str) else str(task.result)
-                    console.print(Markdown(rendered))
+                    render_response(rendered, title="Answer")
+
+                if memory_store and task.result:
+                    try:
+                        metadata = {
+                            "task_id": task_id,
+                            "main_model": "qwen-coder (web)",
+                            "local_model": cfg.get("local_model"),
+                            "audit_score": task.audit_score,
+                            "tool_calls": len(tool_history),
+                            "raw_response_chars": len(raw_response),
+                            "kind": "assistant_response",
+                        }
+                        memory_store.add_message(
+                            session_id,
+                            "assistant",
+                            task.result,
+                            model=cfg.get("local_model"),
+                            metadata=metadata,
+                            tokens_used=assistant_tokens or tracker.total,
+                        )
+                        memory_store.upsert_knowledge(
+                            key=f"response:{session_id}:{task_id}",
+                            content=task.result,
+                            source="assistant",
+                            category="response",
+                            session_id=session_id,
+                            metadata=metadata,
+                        )
+                        if audit_details:
+                            memory_store.set_memory("last_audit", audit_details, category="audit")
+                            memory_store.set_memory(f"last_audit:{session_id}", audit_details, category="audit")
+                            memory_store.upsert_knowledge(
+                                key=f"audit:{session_id}:{task_id}",
+                                content=json.dumps(audit_details, indent=2),
+                                source=cfg.get("local_model"),
+                                category="audit",
+                                session_id=session_id,
+                                metadata={
+                                    "task_id": task_id,
+                                    "audit_score": task.audit_score,
+                                    "kind": "audit_result",
+                                },
+                            )
+                        for idx, (tool_name, args, result) in enumerate(tool_history):
+                            success = not result.startswith("[error]")
+                            memory_store.log_tool_execution(session_id, tool_name, args, result, success=success)
+                            if success and result.strip():
+                                arg_hash = hashlib.sha1(
+                                    json.dumps(args, sort_keys=True).encode("utf-8")
+                                ).hexdigest()[:12]
+                                memory_store.upsert_knowledge(
+                                    key=f"tool:{session_id}:{task_id}:{idx}:{tool_name}:{arg_hash}",
+                                    content=result,
+                                    source=tool_name,
+                                    category="tool_result",
+                                    session_id=session_id,
+                                    metadata={
+                                        "task_id": task_id,
+                                        "arguments": args,
+                                        "kind": "tool_result",
+                                    },
+                                )
+                    except Exception as e:
+                        console.print(f"[{C['warn']}]Could not persist assistant memory: {e}[/]")
 
 
             else:
                 # Simple mode without audit
                 console.print(f"\n[{C['brand']}]◆ Qwen Coder (browser)[/] ", end="")
-                await controller.send_prompt_and_get_response(user_input)
+                result_text, tool_history = await controller.send_prompt_and_get_response(user_input)
+                if memory_store and result_text:
+                    try:
+                        assistant_tokens = max(1, len(result_text) // 4)
+                        metadata = {
+                            "task_id": task_id,
+                            "main_model": "qwen-coder (web)",
+                            "tool_calls": len(tool_history),
+                            "kind": "assistant_response",
+                        }
+                        memory_store.add_message(
+                            session_id,
+                            "assistant",
+                            result_text,
+                            model="qwen-coder (web)",
+                            metadata=metadata,
+                            tokens_used=assistant_tokens,
+                        )
+                        memory_store.upsert_knowledge(
+                            key=f"response:{session_id}:{task_id}",
+                            content=result_text,
+                            source="assistant",
+                            category="response",
+                            session_id=session_id,
+                            metadata=metadata,
+                        )
+                        for idx, (tool_name, args, result) in enumerate(tool_history):
+                            success = not result.startswith("[error]")
+                            memory_store.log_tool_execution(session_id, tool_name, args, result, success=success)
+                            if success and result.strip():
+                                arg_hash = hashlib.sha1(
+                                    json.dumps(args, sort_keys=True).encode("utf-8")
+                                ).hexdigest()[:12]
+                                memory_store.upsert_knowledge(
+                                    key=f"tool:{session_id}:{task_id}:{idx}:{tool_name}:{arg_hash}",
+                                    content=result,
+                                    source=tool_name,
+                                    category="tool_result",
+                                    session_id=session_id,
+                                    metadata={
+                                        "task_id": task_id,
+                                        "arguments": args,
+                                        "kind": "tool_result",
+                                    },
+                                )
+                    except Exception as e:
+                        console.print(f"[{C['warn']}]Could not persist assistant memory: {e}[/]")
 
-            # Store in memory if available
             if memory_store:
                 try:
-                    session_id = cfg.get("session_id", "default")
-                    memory_store.add_message(session_id, "user", user_input, model="user")
+                    memory_store.get_or_create_session(
+                        session_id,
+                        model_main=cfg.get("model"),
+                        model_local=cfg.get("local_model") if local_llm_client else None,
+                    )
                 except Exception:
                     pass
 

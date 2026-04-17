@@ -130,13 +130,24 @@ def handle_slash(
             session_id = cfg.get("session_id", "default")
             conv = memory_store.get_conversation(session_id, limit=10)
             memories = memory_store.get_all_memories()
+            status = memory_store.get_status() if hasattr(memory_store, "get_status") else {}
+            knowledge_count = (
+                memory_store.count_knowledge_entries()
+                if hasattr(memory_store, "count_knowledge_entries")
+                else 0
+            )
 
             t = Table(box=SIMPLE, show_header=False)
             t.add_column(style=C["accent"])
             t.add_column(style=C["dim"])
             t.add_row("Session ID:", session_id)
+            t.add_row("Backend:", status.get("backend", "unknown"))
             t.add_row("Messages stored:", str(len(conv)))
             t.add_row("Memories:", str(len(memories)))
+            if knowledge_count:
+                t.add_row("Knowledge entries:", str(knowledge_count))
+            if status.get("fallback_reason"):
+                t.add_row("Fallback reason:", status["fallback_reason"])
 
             if arg == "show" and conv:
                 console.print(Panel(t, title="Memory Status", border_style=C["dim"]))

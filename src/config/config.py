@@ -1,7 +1,6 @@
 from pathlib import Path
 import json
 import os
-import uuid
 
 # ── constants ─────────────────────────────────────────────────────────────────
 MISSING = []
@@ -32,8 +31,10 @@ DEFAULT_CONFIG = {
     "local_model": LOCAL_MODEL,
     "local_enabled": True,
     "audit_enabled": True,
+    "memory_backend": "auto",  # auto | postgresql | file
+    "require_postgres": False,
     "memory_db_url": "",  # PostgreSQL URL, empty uses file-based storage
-    "session_id": str(uuid.uuid4())[:8],
+    "session_id": "default",
 }
 
 def load_config() -> dict:
@@ -52,11 +53,15 @@ def load_config() -> dict:
         ("QWEN_BASE_URL",     "base_url"),
         ("QWEN_MODEL",        "model"),
         ("LOCAL_MODEL",       "local_model"),
+        ("MEMORY_BACKEND",    "memory_backend"),
         ("MEMORY_DB_URL",     "memory_db_url"),
     ]:
         v = os.environ.get(env)
         if v:
             cfg[key] = v
+    require_postgres = os.environ.get("REQUIRE_POSTGRES")
+    if require_postgres is not None:
+        cfg["require_postgres"] = require_postgres.lower() in {"1", "true", "yes", "on"}
     return cfg
 
 def save_config(cfg: dict):

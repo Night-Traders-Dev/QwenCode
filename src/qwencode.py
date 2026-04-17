@@ -31,11 +31,31 @@ Requirements:
 
 import argparse
 import asyncio
+import importlib
 import json
+import os
 import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
+
+
+def _reexec_in_project_venv_if_needed():
+    """Prefer the repo virtualenv when the current interpreter lacks optional deps."""
+    current = Path(sys.executable).resolve()
+    repo_root = Path(__file__).resolve().parent.parent
+    venv_python = repo_root / ".venv" / "bin" / "python"
+    if not venv_python.exists() or current == venv_python.resolve():
+        return
+
+    for module_name in ("psycopg2",):
+        try:
+            importlib.import_module(module_name)
+        except ImportError:
+            os.execv(str(venv_python), [str(venv_python), str(Path(__file__).resolve()), *sys.argv[1:]])
+
+
+_reexec_in_project_venv_if_needed()
 
 from openai import OpenAI, APIError, APIConnectionError
 from rich.panel import Panel

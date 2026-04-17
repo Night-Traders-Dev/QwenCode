@@ -159,7 +159,7 @@ class QwenBrowserController:
         await page.wait_for_selector(self.SEL_TEXTAREA, timeout=self.LOGIN_TIMEOUT_MS)
 
     async def send_prompt_and_get_response(
-        self, prompt: str
+        self, prompt: str, render_output: bool = True
     ) -> tuple[str, list[tuple[str, dict, str]]]:
         page = self._page
         tool_history: list[tuple[str, dict, str]] = []
@@ -172,6 +172,7 @@ class QwenBrowserController:
             final_text = await mirror.stream_response(
                 self._renderer,
                 timeout_ms=self.RESPONSE_TIMEOUT_MS,
+                render_output=render_output,
             )
 
             # Check if we got a valid response (not empty due to timeout/hang)

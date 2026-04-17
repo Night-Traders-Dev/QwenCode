@@ -3,7 +3,31 @@ from pathlib import Path
 from textwrap import TextWrapper
 from tools.definitions import TOOLS
 from tools.tools import dispatch_tool, print_tool_call, print_tool_result
-from rich.console import Console
+
+try:
+    from rich.console import Console
+    from rich.markdown import Markdown
+    from rich.panel import Panel
+    from rich.syntax import Syntax
+    from rich.table import Table
+    from rich.text import Text
+    from rich import box
+except ImportError:
+    _MISSING.append("rich")
+
+
+
+# ── colour palette ────────────────────────────────────────────────────────────
+C = {
+    "brand":  "#5BA3F5",
+    "accent": "#A78BFA",
+    "ok":     "#4ADE80",
+    "warn":   "#FBBF24",
+    "err":    "#F87171",
+    "dim":    "#6B7280",
+    "tool":   "#34D399",
+    "code":   "#F59E0B",
+}
 
 
 # ── live renderer ─────────────────────────────────────────────────────────────

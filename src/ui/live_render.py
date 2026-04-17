@@ -8,17 +8,26 @@ from rich.text import Text
 
 # ── colour palette ────────────────────────────────────────────────────────────
 C = {
-    "brand":  "#5BA3F5",
-    "accent": "#A78BFA",
-    "ok":     "#4ADE80",
-    "warn":   "#FBBF24",
-    "err":    "#F87171",
-    "dim":    "#6B7280",
-    "tool":   "#34D399",
-    "code":   "#F59E0B",
+    "brand":    "#5BA3F5",
+    "accent":   "#A78BFA",
+    "ok":       "#4ADE80",
+    "warn":     "#FBBF24",
+    "err":      "#F87171",
+    "dim":      "#6B7280",
+    "tool":     "#34D399",
+    "code":     "#F59E0B",
+    "thought":  "#9CA3AF",    # dim gray for thoughts
+    "markdown": "#E5E7EB",   # light gray for markdown text
+    "header":   "#5BA3F5",     # brand blue for headers
+    "meta":     "#9CA3AF",
+    "task":     "#34D399",
+    "plan":     "#A78BFA",
+    "debug":    "#FBBF24",
+    "panel":    "#1b2330",
+    "text":     "#e5e9f0",
 }
 
-VERSION = "0.5.0"
+VERSION = "0.0.1"
 
 
 # ── live renderer ─────────────────────────────────────────────────────────────

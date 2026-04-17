@@ -1,20 +1,38 @@
 import json
-from typing import Optional
+from typing import Optional, List
 from prompt_toolkit import PromptSession
 from prompt_toolkit.history import FileHistory
 from prompt_toolkit.styles import Style as PTStyle
 from prompt_toolkit.formatted_text import HTML
 from prompt_toolkit.key_binding import KeyBindings
+from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
+from prompt_toolkit.completion import Completer, Completion
 from rich.table import Table
 from rich.panel import Panel
+from rich.box import SIMPLE
 from config.config import HISTORY_FILE, save_config
 from tools.definitions import TOOLS
 from ui.rich_ui import console
 from ui.live_render import C
 
+# ── Custom completer for slash commands ───────────────────────────────────────
+class SlashCompleter(Completer):
+    SLASH_COMMANDS = [
+        "/help", "/clear", "/model", "/tools", "/config", "/exit"
+    ]
+
+    def get_completions(self, document, complete_event):
+        text = document.text_before_cursor
+        if text.startswith("/"):
+            # Find the partial command
+            partial = text.split()[0] if " " not in text else text
+            for cmd in self.SLASH_COMMANDS:
+                if cmd.startswith(partial):
+                    yield Completion(cmd, start_position=-len(partial))
+
 # ── prompt session ────────────────────────────────────────────────────────────
 def print_help():
-    t = Table(box="SIMPLE", show_header=False, padding=(0, 2))
+    t = Table(box=SIMPLE, show_header=False, padding=(0, 2))
     t.add_column(style=C["accent"])
     t.add_column(style=C["dim"])
     for k, v in [
@@ -59,7 +77,7 @@ def handle_slash(
                 f"[{C['dim']}]Current model:[/] [{C['accent']}]{cfg['model']}[/]"
             )
     elif verb == "/tools":
-        t = Table(box="SIMPLE", show_header=True,
+        t = Table(box=SIMPLE, show_header=True,
                   header_style=C["brand"])
         t.add_column("Tool",        style=C["tool"])
         t.add_column("Description", style=C["dim"])
@@ -88,6 +106,9 @@ def build_prompt_session() -> PromptSession:
     style = PTStyle.from_dict({
         "prompt":       f"bold {C['brand']}",
         "prompt-arrow": C["dim"],
+        "auto-suggestion": C["dim"],
+        "completion-menu": f"bg:{C['panel']} {C['text']}",
+        "completion-menu.current": f"bg:{C['accent']} {C['brand']}",
     })
     kb = KeyBindings()
 
@@ -95,8 +116,15 @@ def build_prompt_session() -> PromptSession:
     def _newline(event):
         event.current_buffer.insert_text("\n")
 
-    return PromptSession(history=hist, style=style, key_bindings=kb,
-                         multiline=False)
+    return PromptSession(
+        history=hist,
+        style=style,
+        key_bindings=kb,
+        multiline=False,
+        auto_suggest=AutoSuggestFromHistory(),
+        completer=SlashCompleter(),
+        complete_while_typing=True,
+    )
 
 # ── get_input: sync version (API mode) ───────────────────────────────────────
 def get_input(session: PromptSession, cwd: str) -> Optional[str]:

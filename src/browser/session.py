@@ -13,7 +13,7 @@ try:
     from memory.local_llm import get_local_llm
     from ui.task_tracker import (
         get_task_queue, get_token_tracker, get_thinking_ui,
-        Task, reset_trackers, run_task_with_timing
+        Task, reset_trackers, run_task_with_timing, get_status_panel
     )
     MEMORY_AVAILABLE = True
 except ImportError:
@@ -26,6 +26,8 @@ except ImportError:
     Task = None
     reset_trackers = None
     run_task_with_timing = None
+    get_status_panel = None
+
 
 
 

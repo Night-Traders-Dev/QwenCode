@@ -564,163 +564,158 @@ def import_cookies_from_json(cookie_file: str, data_dir: Path):
 # ── live renderer ─────────────────────────────────────────────────────────────
 class LiveRenderer:
     def __init__(self):
-        self.full_text = ""
-        self._printed = 0
-        self._last_mode = None
+        self.full_text    = ""
+        self._printed     = 0
+        self._think_shown = False
 
     def reset(self):
-        self.full_text = ""
-        self._printed = 0
-        self._last_mode = None
+        self.full_text    = ""
+        self._printed     = 0
+        self._think_shown = False
 
-    def _print_chunk(self, chunk: str):
+    def _emit(self, chunk: str):
         if not chunk:
             return
-
-        lines = chunk.splitlines(keepends=True)
-        for line in lines:
-            stripped = line.strip().lower()
-            if "thinking" in stripped and len(stripped) < 80:
-                if self._last_mode != "think":
-                    console.print()
-                    self._last_mode = "think"
-                console.print(f"[{C['dim']}]{line}[/{C['dim']}]", end="", markup=False)
-            else:
-                if self._last_mode != "answer":
-                    self._last_mode = "answer"
-                console.print(line, end="", markup=False)
+        low = chunk.lower()
+        if "thinking completed" in low or "thinking..." in low:
+            if not self._think_shown:
+                console.print(f"\n[{C['dim']}]🤔 {chunk.strip()}[/]", markup=False)
+                self._think_shown = True
+            return
+        console.print(chunk, end="", markup=False)
 
     def update(self, new_text: str):
-        if new_text is None:
+        if not new_text:
             return
-
         if len(new_text) < self._printed:
             self.full_text = new_text
-            self._printed = 0
+            self._printed  = 0
         else:
             self.full_text = new_text
-
         delta = self.full_text[self._printed:]
         if delta:
-            self._print_chunk(delta)
+            self._emit(delta)
             self._printed = len(self.full_text)
 
     def finish(self):
-        if self._printed < len(self.full_text):
-            self._print_chunk(self.full_text[self._printed:])
+        remaining = self.full_text[self._printed:]
+        if remaining:
+            self._emit(remaining)
             self._printed = len(self.full_text)
 
 
 # ── transcript mirror ─────────────────────────────────────────────────────────
 class BrowserTranscriptMirror:
-    ROOT_JS = r"""
-    () => {
-        const roots = [
-            document.querySelector('main'),
-            document.querySelector('[role="main"]'),
-            document.querySelector('#app'),
-            document.body,
-        ].filter(Boolean);
+    """
+    Snapshots the number of assistant messages BEFORE submitting,
+    then waits for a NEW message to appear (count + 1) and streams
+    only that message's text live to the terminal.
+    """
 
-        const cleanup = (root) => {
-            const clone = root.cloneNode(true);
-            const removeSelectors = [
-                'textarea',
-                'input',
-                'button',
-                'nav',
-                'aside',
-                'header',
-                'footer',
-                '[contenteditable="true"]',
-                '[role="textbox"]',
-                '[class*="sidebar"]',
-                '[class*="menu"]',
-                '[class*="toolbar"]',
-                '[class*="search"]',
-            ];
-            for (const sel of removeSelectors) {
-                clone.querySelectorAll(sel).forEach(n => n.remove());
-            }
-            return (clone.innerText || clone.textContent || '')
-                .replace(/\u00a0/g, ' ')
-                .replace(/[ \t]+\n/g, '\n')
-                .replace(/\n{3,}/g, '\n\n')
-                .trim();
+    PROBE_JS = r"""
+    () => {
+        const CONTAINER_SELS = [
+            '.conversation-content', '.chat-wrapper', '.chat-content',
+            '.messages', '[class*="conversation"]', '[class*="chat-list"]',
+            '[class*="message-list"]', 'main',
+        ];
+        const MSG_SELS = [
+            '.message-item.assistant',
+            '.message-item[data-role="assistant"]',
+            '[class*="assistant"][class*="message"]',
+            '[class*="message"][class*="assistant"]',
+            '.msg-assistant', '.ai-message',
+            '[data-role="assistant"]', '[data-type="assistant"]',
+        ];
+
+        const getText = (el) => {
+            const clone = el.cloneNode(true);
+            ['button','a[href]','[class*="source"]','[class*="cite"]',
+             '[class*="reference"]','[class*="action"]','[class*="feedback"]']
+             .forEach(s => clone.querySelectorAll(s).forEach(n => n.remove()));
+            return (clone.innerText || clone.textContent || '').trim();
         };
 
-        for (const root of roots) {
-            const txt = cleanup(root);
-            if (txt) return txt;
+        for (const sel of MSG_SELS) {
+            const nodes = Array.from(document.querySelectorAll(sel));
+            if (nodes.length > 0) {
+                return {
+                    count: nodes.length,
+                    text: getText(nodes[nodes.length - 1]),
+                    method: sel
+                };
+            }
         }
-        return '';
+        for (const csel of CONTAINER_SELS) {
+            const container = document.querySelector(csel);
+            if (!container) continue;
+            const children = Array.from(container.children);
+            for (let i = children.length - 1; i >= 0; i--) {
+                const t = getText(children[i]);
+                if (t.length > 20) {
+                    return { count: children.length, text: t,
+                             method: csel + '[last-child]' };
+                }
+            }
+        }
+        return { count: 0, text: '', method: 'none' };
     }
     """
 
-    def __init__(self, page: "Page", prompt: str):
-        self.page = page
-        self.prompt = (prompt or "").strip()
-        self.baseline = ""
-        self.last_appended = ""
+    def __init__(self, page: "Page"):
+        self.page        = page
+        self._pre_count  = 0
 
-    async def snapshot_before_submit(self):
-        self.baseline = await self._extract_transcript()
-        self.last_appended = ""
+    async def snapshot(self):
+        result = await self._probe()
+        self._pre_count = result.get("count", 0)
 
-    async def _extract_transcript(self) -> str:
+    async def _probe(self) -> dict:
         try:
-            text = await self.page.evaluate(self.ROOT_JS)
-            return (text or "").strip()
+            return await self.page.evaluate(self.PROBE_JS) or {}
         except Exception:
-            return ""
+            return {"count": 0, "text": "", "method": "error"}
 
-    def _strip_prompt_echo(self, text: str) -> str:
-        t = text.lstrip()
-        if self.prompt and t.startswith(self.prompt):
-            t = t[len(self.prompt):].lstrip()
-        return t
-
-    def _extract_appended(self, current: str) -> str:
-        if not current:
-            return ""
-
-        if self.baseline and current.startswith(self.baseline):
-            appended = current[len(self.baseline):]
-        else:
-            appended = current
-
-        appended = self._strip_prompt_echo(appended)
-        return appended.strip()
-
-    async def stream_until_stable(
+    async def stream_new_response(
         self,
         renderer: LiveRenderer,
         timeout_ms: int = 120_000,
-        poll_interval: float = 0.10,
-        stable_seconds: float = 1.5,
+        poll_interval: float = 0.12,
+        stable_seconds: float = 1.8,
     ) -> str:
         renderer.reset()
-        start = time.monotonic()
+        start       = time.monotonic()
         last_change = start
-        last_seen = ""
+        last_text   = ""
+        found_new   = False
 
         while (time.monotonic() - start) * 1000 < timeout_ms:
-            current = await self._extract_transcript()
-            appended = self._extract_appended(current)
+            result = await self._probe()
+            count  = result.get("count", 0)
+            text   = result.get("text",  "")
 
-            if appended != last_seen:
-                renderer.update(appended)
-                last_seen = appended
+            if not found_new:
+                if count > self._pre_count and text:
+                    found_new = True
+                    console.print(
+                        f"[{C['dim']}]  (selector: {result.get('method','?')})[/]"
+                    )
+                else:
+                    await asyncio.sleep(poll_interval)
+                    continue
+
+            if text != last_text:
+                renderer.update(text)
+                last_text   = text
                 last_change = time.monotonic()
 
-            if appended and (time.monotonic() - last_change) >= stable_seconds:
+            if text and (time.monotonic() - last_change) >= stable_seconds:
                 break
 
             await asyncio.sleep(poll_interval)
 
         renderer.finish()
-        self.last_appended = last_seen
-        return last_seen
+        return last_text
 
 
 # ── browser controller ────────────────────────────────────────────────────────
@@ -876,12 +871,12 @@ class QwenBrowserController:
         page = self._page
         tool_history: list[tuple[str, dict, str]] = []
 
-        mirror = BrowserTranscriptMirror(page, prompt)
-        await mirror.snapshot_before_submit()
+        mirror = BrowserTranscriptMirror(page)
+        await mirror.snapshot()
         await self._submit(page, prompt)
 
         for _round_idx in range(self.MAX_TOOL_ROUNDS):
-            final_text = await mirror.stream_until_stable(
+            final_text = await mirror.stream_new_response(
                 self._renderer,
                 timeout_ms=self.RESPONSE_TIMEOUT_MS,
             )
@@ -905,14 +900,15 @@ class QwenBrowserController:
                     pass
 
             console.print(f"\n[{C['brand']}]◆ Qwen Coder (browser)[/] ", end="")
-            mirror = BrowserTranscriptMirror(page, "\n\n".join(result_parts))
-            await mirror.snapshot_before_submit()
+            mirror = BrowserTranscriptMirror(page)
+            await mirror.snapshot()
             await self._submit(page, "\n\n".join(result_parts))
 
         console.print(
             f"[{C['warn']}]⚠  Reached max tool rounds ({self.MAX_TOOL_ROUNDS}) in browser mode.[/]"
         )
         return self._renderer.full_text, tool_history
+    
 
     async def _submit(self, page: "Page", text: str):
         textarea = await page.wait_for_selector(self.SEL_TEXTAREA, timeout=10_000)

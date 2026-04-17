@@ -6,7 +6,6 @@ from ui.live_render import LiveRenderer
 from tools.definitions import TOOLS
 from tools.tools import dispatch_tool, print_tool_call, print_tool_result
 
-
 # ── transcript mirror ─────────────────────────────────────────────────────────
 class BrowserTranscriptMirror:
     PROBE_JS = r"""

@@ -3,6 +3,8 @@ from pathlib import Path
 from textwrap import TextWrapper
 from tools.definitions import TOOLS
 from tools.tools import dispatch_tool, print_tool_call, print_tool_result
+from rich.console import Console
+
 
 # ── live renderer ─────────────────────────────────────────────────────────────
 class LiveRenderer:

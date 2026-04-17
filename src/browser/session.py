@@ -106,6 +106,12 @@ async def browser_session(cfg: dict, headless: bool = False):
             raw_response = ""
             audit_details = None
             assistant_tokens = 0
+            response_rendered = False
+            warmup_task = None
+            use_local_formatter = bool(cfg.get("local_format_enabled", False))
+
+            if local_llm_client:
+                warmup_task = asyncio.create_task(asyncio.to_thread(local_llm_client.warmup))
 
             if memory_store:
                 try:
@@ -128,13 +134,14 @@ async def browser_session(cfg: dict, headless: bool = False):
                 panel = get_status_panel()
 
                 async def main_task():
-                    nonlocal tool_history, raw_response, assistant_tokens
+                    nonlocal tool_history, raw_response, assistant_tokens, response_rendered
                     console.print(f"\n[{C['brand']}]◆ Qwen Coder (browser)[/] ", end="")
                     result_text, tool_history = await controller.send_prompt_and_get_response(
                         user_input,
-                        render_output=False,
+                        render_output=True,
                     )
                     raw_response = result_text
+                    response_rendered = bool(result_text)
                     # Estimate tokens from response
                     if result_text:
                         estimated_tokens = max(1, len(result_text) // 4)
@@ -146,13 +153,30 @@ async def browser_session(cfg: dict, headless: bool = False):
                 async def audit_task(result):
                     nonlocal audit_details, assistant_tokens
                     if local_llm_client and local_llm_client.is_available():
-                        # First format the result for professional display
-                        panel.update(stage="formatting", step="Formatting with local LLM")
-                        formatted_result = local_llm_client.format_for_display(result, user_input)
+                        if warmup_task:
+                            try:
+                                await warmup_task
+                            except Exception:
+                                pass
+
+                        formatted_result = result
+                        if use_local_formatter:
+                            panel.update(stage="formatting", step="Formatting with local LLM")
+                            formatted_result = await asyncio.to_thread(
+                                local_llm_client.format_for_display,
+                                result,
+                                user_input,
+                            )
+                            if not (formatted_result or "").strip():
+                                formatted_result = result
 
                         # Then audit the formatted result
                         panel.update(stage="auditing", step="Auditing response quality")
-                        audit_result = local_llm_client.audit_response(formatted_result, user_input)
+                        audit_result = await asyncio.to_thread(
+                            local_llm_client.audit_response,
+                            formatted_result,
+                            user_input,
+                        )
                         audit_details = audit_result
 
                         # Update token count
@@ -167,13 +191,14 @@ async def browser_session(cfg: dict, headless: bool = False):
 
                 await run_task_with_timing(task, main_task, audit_task, enable_audit=True)
 
-                # Display the professionally formatted result
-                if task.result:
+                # Display the final answer only if nothing was already rendered live.
+                if task.result and not response_rendered:
                     rendered = task.result if isinstance(task.result, str) else str(task.result)
                     render_response(rendered, title="Answer")
 
                 if memory_store and task.result:
                     try:
+                        assistant_model = cfg.get("local_model") if use_local_formatter else "qwen-coder (web)"
                         metadata = {
                             "task_id": task_id,
                             "main_model": "qwen-coder (web)",
@@ -187,7 +212,7 @@ async def browser_session(cfg: dict, headless: bool = False):
                             session_id,
                             "assistant",
                             task.result,
-                            model=cfg.get("local_model"),
+                            model=assistant_model,
                             metadata=metadata,
                             tokens_used=assistant_tokens or tracker.total,
                         )

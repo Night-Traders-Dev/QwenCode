@@ -9,6 +9,8 @@ Uses qwen3.5:4b (or configurable model) for:
 """
 
 import json
+import time
+from threading import Lock
 from typing import Optional, List, Dict, Any, Generator
 from openai import OpenAI
 
@@ -33,6 +35,9 @@ class LocalLLMClient:
             api_key=LOCAL_API_KEY
         )
         self._available = None
+        self._warmup_lock = Lock()
+        self._last_warmup = 0.0
+        self._warmup_ttl_seconds = 120.0
 
     def is_available(self) -> bool:
         """Check if the local LLM is available."""
@@ -88,6 +93,31 @@ class LocalLLMClient:
         """
         response = self.chat(messages, temperature, max_tokens, stream=False)
         return response.choices[0].message.content
+
+    def warmup(self, force: bool = False) -> bool:
+        """Preload the local model with a tiny request so later calls start faster."""
+        now = time.monotonic()
+        if not force and self._last_warmup and (now - self._last_warmup) < self._warmup_ttl_seconds:
+            return True
+
+        with self._warmup_lock:
+            now = time.monotonic()
+            if not force and self._last_warmup and (now - self._last_warmup) < self._warmup_ttl_seconds:
+                return True
+            try:
+                response = self.chat(
+                    [
+                        {"role": "system", "content": "Reply with READY."},
+                        {"role": "user", "content": "Warm up the model."},
+                    ],
+                    temperature=0.0,
+                    max_tokens=4,
+                    stream=False,
+                )
+                self._last_warmup = time.monotonic()
+                return bool(response.choices)
+            except Exception:
+                return False
 
     def stream_chat(self, messages: List[Dict],
                     temperature: float = 0.3,
@@ -162,7 +192,7 @@ Respond with a JSON object containing:
             {"role": "user", "content": prompt}
         ]
 
-        response = self.chat_complete(messages, temperature=0.1)
+        response = self.chat_complete(messages, temperature=0.1, max_tokens=400)
 
         try:
             # Try to extract JSON from response
@@ -211,7 +241,7 @@ Respond with a JSON object containing:
             {"role": "user", "content": f"{context}Response to audit:\n{response}"}
         ]
 
-        response_text = self.chat_complete(messages, temperature=0.1)
+        response_text = self.chat_complete(messages, temperature=0.1, max_tokens=600)
 
         try:
             start = response_text.find('{')
@@ -245,7 +275,7 @@ Respond with a JSON object containing:
             {"role": "user", "content": text}
         ]
 
-        return self.chat_complete(messages, temperature=0.1)
+        return self.chat_complete(messages, temperature=0.1, max_tokens=1200)
 
     def extract_key_points(self, text: str) -> List[str]:
         """

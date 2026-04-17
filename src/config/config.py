@@ -30,6 +30,7 @@ DEFAULT_CONFIG = {
     "stream":      True,
     "local_model": LOCAL_MODEL,
     "local_enabled": True,
+    "local_format_enabled": False,
     "audit_enabled": True,
     "memory_backend": "auto",  # auto | postgresql | file
     "require_postgres": False,
@@ -53,12 +54,16 @@ def load_config() -> dict:
         ("QWEN_BASE_URL",     "base_url"),
         ("QWEN_MODEL",        "model"),
         ("LOCAL_MODEL",       "local_model"),
+        ("LOCAL_FORMAT_ENABLED", "local_format_enabled"),
         ("MEMORY_BACKEND",    "memory_backend"),
         ("MEMORY_DB_URL",     "memory_db_url"),
     ]:
         v = os.environ.get(env)
         if v:
-            cfg[key] = v
+            if key == "local_format_enabled":
+                cfg[key] = v.lower() in {"1", "true", "yes", "on"}
+            else:
+                cfg[key] = v
     require_postgres = os.environ.get("REQUIRE_POSTGRES")
     if require_postgres is not None:
         cfg["require_postgres"] = require_postgres.lower() in {"1", "true", "yes", "on"}

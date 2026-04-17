@@ -328,9 +328,9 @@ class BrowserTranscriptMirror:
         self,
         renderer: LiveRenderer,
         timeout_ms: int = 120_000,
-        poll_interval: float = 0.15,
-        answer_stable_seconds: float = 2.0,
-        post_thinking_grace_seconds: float = 1.5,
+        poll_interval: float = 0.10,
+        answer_stable_seconds: float = 0.80,
+        post_thinking_grace_seconds: float = 0.40,
         render_output: bool = True,
     ) -> str:
         renderer.reset()
@@ -341,7 +341,7 @@ class BrowserTranscriptMirror:
         last = dict(self._baseline)
         last_answer_len = 0
         stable_count = 0  # Count consecutive polls with no change
-        required_stable_polls = int(answer_stable_seconds / poll_interval)
+        required_stable_polls = max(1, int(answer_stable_seconds / poll_interval))
 
         while (time.monotonic() - start) * 1000 < timeout_ms:
             state = self._extract_state(await self._probe())

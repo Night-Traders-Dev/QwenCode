@@ -1,6 +1,11 @@
 from pathlib import Path
 from browser.controller import QwenBrowserController
-from config.config import MISSING, CONFIG_DIR, CONFIG_FILE, HISTORY_FILE, DASHSCOPE_BASE_URL, DEFAULT_MODEL, LOCAL_BASE_URL, LOCAL_API_KEY
+from config.config import BROWSER_DATA_DIR
+from ui.rich_ui import console
+from ui.live_render import C
+from ui.banner import print_banner_browser
+from config.prompt import build_prompt_session, get_input_async, handle_slash
+
 
 
 

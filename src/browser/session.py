@@ -139,7 +139,7 @@ async def browser_session(cfg: dict, headless: bool = False):
                 # Display the professionally formatted result
                 if task.result:
                     from rich.markdown import Markdown
-                    console.print(Markdown(join(task.result)))
+                    console.print(Markdown("\n".join(task.result)))
 
             else:
                 # Simple mode without audit

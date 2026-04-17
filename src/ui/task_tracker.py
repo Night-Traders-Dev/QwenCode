@@ -278,7 +278,7 @@ def reset_status_panel():
         _status_panel.stop()
     _status_panel = StatusPanel()
 
-
+@dataclass
 class TaskStep:
     """Represents a single step in a task."""
     name: str

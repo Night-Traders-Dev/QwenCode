@@ -7,6 +7,7 @@ Provides:
 - Task queue management
 - Live token usage display
 - Thinking UI visualization (Claude Code style)
+- Bottom status panel with live metrics
 """
 
 import asyncio
@@ -20,6 +21,11 @@ from threading import Thread, Event
 
 from ui.rich_ui import console
 from ui.live_render import C
+from rich.live import Live
+from rich.panel import Panel
+from rich.table import Table
+from rich.text import Text
+from rich import box
 
 
 class TaskStatus(Enum):
@@ -31,6 +37,173 @@ class TaskStatus(Enum):
 
 
 @dataclass
+class StatusPanel:
+    """Live bottom panel showing task metrics, timing, and status."""
+
+    def __init__(self):
+        self.task_start_time: float = 0
+        self.current_stage: str = "idle"
+        self.current_tool: str = ""
+        self.tokens_main: int = 0
+        self.tokens_local: int = 0
+        self.step_name: str = ""
+        self.step_start: float = 0
+        self.is_running: bool = False
+        self._live: Optional[Live] = None
+
+    def start(self, prompt: str = ""):
+        """Start the status panel."""
+        self.task_start_time = time.time()
+        self.is_running = True
+        self.current_stage = "initializing"
+        self.step_start = time.time()
+
+        # Create and start live display
+        self._live = Live(self._generate_panel(), console=console, refresh_per_second=4)
+        self._live.start()
+
+    def update(self,
+               stage: str = None,
+               tool: str = None,
+               tokens_main: int = None,
+               tokens_local: int = None,
+               step: str = None):
+        """Update status panel with new information."""
+        if stage:
+            self.current_stage = stage
+        if tool is not None:
+            self.current_tool = tool
+        if tokens_main is not None:
+            self.tokens_main = tokens_main
+        if tokens_local is not None:
+            self.tokens_local = tokens_local
+        if step:
+            self.step_name = step
+            self.step_start = time.time()
+
+        if self._live and self.is_running:
+            self._live.update(self._generate_panel())
+
+    def _get_elapsed(self) -> str:
+        """Get formatted elapsed time."""
+        if not self.task_start_time:
+            return "0s"
+        elapsed = time.time() - self.task_start_time
+        if elapsed < 1.0:
+            return f"{elapsed*1000:.0f}ms"
+        elif elapsed < 60:
+            return f"{elapsed:.1f}s"
+        else:
+            mins = int(elapsed // 60)
+            secs = elapsed % 60
+            return f"{mins}m {secs:.0f}s"
+
+    def _get_step_elapsed(self) -> str:
+        """Get formatted step elapsed time."""
+        if not self.step_start:
+            return "0s"
+        elapsed = time.time() - self.step_start
+        if elapsed < 1.0:
+            return f"{elapsed*1000:.0f}ms"
+        elif elapsed < 60:
+            return f"{elapsed:.1f}s"
+        else:
+            mins = int(elapsed // 60)
+            secs = elapsed % 60
+            return f"{mins}m {secs:.0f}s"
+
+    def _generate_panel(self) -> Panel:
+        """Generate the status panel content."""
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        elapsed = self._get_elapsed()
+        step_elapsed = self._get_step_elapsed()
+
+        # Build status line
+        status_parts = []
+
+        # Stage indicator with color
+        stage_colors = {
+            "initializing": C["dim"],
+            "planning": C["brand"],
+            "processing": C["accent"],
+            "auditing": C["tool"],
+            "formatting": C["code"],
+            "completed": C["ok"],
+            "failed": C["err"],
+            "idle": C["dim"]
+        }
+        stage_color = stage_colors.get(self.current_stage, C["dim"])
+        status_parts.append(f"[{stage_color}]● {self.current_stage}[/{stage_color}]")
+
+        # Current tool if applicable
+        if self.current_tool:
+            status_parts.append(f"[{C['tool']}]🔧 {self.current_tool}[/{C['tool']}]")
+
+        # Step info
+        if self.step_name:
+            status_parts.append(f"[{C['dim']}]⏱ {self.step_name} ({step_elapsed})[/{C['dim']}]")
+
+        # Token counts
+        token_parts = []
+        if self.tokens_main > 0:
+            token_parts.append(f"Main: [bold]{self.tokens_main:,}[/]")
+        if self.tokens_local > 0:
+            token_parts.append(f"Local: [bold]{self.tokens_local:,}[/]")
+        if token_parts:
+            status_parts.append(f"[{C['code']}]📊 {' | '.join(token_parts)}[/{C['code']}]")
+
+        # Elapsed time
+        status_parts.append(f"[{C['dim']}]⏲ {elapsed}[/{C['dim']}]")
+
+        # Current time
+        status_parts.append(f"[{C['dim']}]🕐 {now}[/{C['dim']}]")
+
+        # Join with separators
+        status_text = f"  {' │ '.join(status_parts)}  "
+
+        return Panel(
+            Text.from_markup(status_text),
+            title=f"[{C['brand']}]Task Status[/]",
+            border_style=C["dim"],
+            padding=(0, 1)
+        )
+
+    def stop(self):
+        """Stop the live display."""
+        self.is_running = False
+        if self._live:
+            self._live.stop()
+            self._live = None
+
+    def finish(self, final_stage: str = "completed"):
+        """Finish and show final status."""
+        self.current_stage = final_stage
+        if self._live:
+            self._live.update(self._generate_panel())
+            time.sleep(0.5)  # Show final state briefly
+            self.stop()
+
+
+# Global status panel instance
+_status_panel: Optional[StatusPanel] = None
+
+
+def get_status_panel() -> StatusPanel:
+    """Get or create the global status panel instance."""
+    global _status_panel
+    if _status_panel is None:
+        _status_panel = StatusPanel()
+    return _status_panel
+
+
+def reset_status_panel():
+    """Reset the status panel for a new task."""
+    global _status_panel
+    if _status_panel and _status_panel._live:
+        _status_panel.stop()
+    _status_panel = StatusPanel()
+
+
 class TaskStep:
     """Represents a single step in a task."""
     name: str
@@ -297,6 +470,7 @@ def reset_trackers():
     global _token_tracker, _thinking_ui
     _token_tracker = TokenTracker()
     _thinking_ui = ThinkingUI()
+    reset_status_panel()
 
 
 async def run_task_with_timing(
@@ -320,6 +494,11 @@ async def run_task_with_timing(
     task.status = TaskStatus.RUNNING
     tracker = get_token_tracker()
     ui = get_thinking_ui()
+    panel = get_status_panel()
+
+    # Start status panel
+    panel.start(task.prompt[:50] + "..." if len(task.prompt) > 50 else task.prompt)
+    ui.start("Starting task...")
 
     # Step 1: Main task execution
     main_step = TaskStep(name="Processing request")
@@ -327,7 +506,7 @@ async def run_task_with_timing(
     main_step.status = TaskStatus.RUNNING
     main_step.start_time = time.time()
 
-    ui.start("Starting task...")
+    panel.update(stage="processing", step="Processing request")
 
     try:
         # Run main function
@@ -337,6 +516,7 @@ async def run_task_with_timing(
         main_step.end_time = time.time()
         main_step.status = TaskStatus.COMPLETED
 
+        panel.update(stage="formatting", step="Formatting output")
         ui.update(result[:500] + "..." if len(result) > 500 else result, step="Main processing complete")
 
     except Exception as e:
@@ -344,6 +524,7 @@ async def run_task_with_timing(
         main_step.status = TaskStatus.FAILED
         task.error = str(e)
         task.status = TaskStatus.FAILED
+        panel.finish("failed")
         ui.finish(audit_score=0)
         return task
 
@@ -354,6 +535,7 @@ async def run_task_with_timing(
         audit_step.status = TaskStatus.AUDITING
         audit_step.start_time = time.time()
 
+        panel.update(stage="auditing", step="Running quality audit")
         ui.update("Running quality audit...", step="Auditing")
 
         try:
@@ -368,6 +550,9 @@ async def run_task_with_timing(
             audit_step.end_time = time.time()
             audit_step.status = TaskStatus.COMPLETED
 
+            # Update token counts in panel
+            panel.update(tokens_local=tracker.local_tokens)
+
         except Exception as e:
             audit_step.end_time = time.time()
             audit_step.status = TaskStatus.FAILED
@@ -375,6 +560,12 @@ async def run_task_with_timing(
 
     task.status = TaskStatus.COMPLETED
     task.total_tokens = tracker.total
+
+    # Update final token counts
+    panel.update(tokens_main=tracker.main_tokens, tokens_local=tracker.local_tokens)
+
+    # Finish UI components
+    panel.finish("completed")
     ui.finish(audit_score=task.audit_score)
 
     return task

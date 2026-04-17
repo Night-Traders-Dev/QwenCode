@@ -319,6 +319,44 @@ Respond with a JSON object containing:
 
         return questions[:count]
 
+    def format_for_display(self, raw_text: str, prompt: str = None) -> str:
+        """
+        Format raw LLM output for professional display with proper layout, style, and design.
+
+        This method ensures:
+        - Proper paragraph breaks and spacing
+        - Clean markdown formatting
+        - Removal of duplicate content
+        - Professional text layout
+
+        Args:
+            raw_text: Raw output from the main LLM
+            prompt: Original user prompt for context
+
+        Returns:
+            Professionally formatted text ready for display
+        """
+        context = f"Original user request: {prompt}\n\n" if prompt else ""
+
+        messages = [
+            {"role": "system", "content": """You are a professional text formatting assistant. Your job is to take raw AI-generated content and format it for beautiful, professional display.
+
+Guidelines:
+1. Ensure proper paragraph breaks - each distinct thought should be its own paragraph
+2. Use appropriate Markdown formatting (headers, lists, bold, italics) where it enhances readability
+3. Remove any duplicate or repeated content
+4. Fix any run-on sentences or awkward line breaks
+5. Ensure consistent spacing and alignment
+6. Preserve all factual information and key details
+7. Do NOT add new content or change the meaning - only improve formatting and layout
+8. Use proper newline characters (\\n\\n) between paragraphs
+
+Format the text to look clean and professional when rendered as Markdown."""},
+            {"role": "user", "content": f"{context}Please format this text for professional display:\n\n{raw_text}"}
+        ]
+
+        return self.chat_complete(messages, temperature=0.1)
+
 
 # Global instance (lazy initialization)
 _local_llm: Optional[LocalLLMClient] = None

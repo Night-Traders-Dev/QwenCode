@@ -89,28 +89,55 @@ async def browser_session(cfg: dict, headless: bool = False):
                 reset_trackers()
                 task = Task(id=task_id, prompt=user_input)
 
+                tracker = get_token_tracker()
+                panel = get_status_panel()
+
                 async def main_task():
                     console.print(f"\n[{C['brand']}]◆ Qwen Coder (browser)[/] ", end="")
                     result = await controller.send_prompt_and_get_response(user_input)
+                    # Estimate tokens from response
+                    if result:
+                        estimated_tokens = len(result) // 4
+                        tracker.add_main(estimated_tokens)
+                        panel.update(tokens_main=tracker.main_tokens)
                     return result
 
                 async def audit_task(result):
                     if local_llm_client and local_llm_client.is_available():
-                        audit_result = local_llm_client.audit_response(result, user_input)
-                        # Store audit in memory
+                        # First format the result for professional display
+                        panel.update(stage="formatting", step="Formatting with local LLM")
+                        formatted_result = local_llm_client.format_for_display(result, user_input)
+
+                        # Then audit the formatted result
+                        panel.update(stage="auditing", step="Auditing response quality")
+                        audit_result = local_llm_client.audit_response(formatted_result, user_input)
+
+                        # Store in memory
                         if memory_store:
                             memory_store.set_memory(f"last_audit_{task_id}", audit_result)
+                            memory_store.add_message(
+                                cfg.get("session_id", "default"),
+                                "assistant",
+                                formatted_result,
+                                model=cfg.get("local_model"),
+                                tokens_used=tracker.local_tokens
+                            )
+
+                        # Update token count
+                        tracker.add_local(len(formatted_result) // 4)
+                        panel.update(tokens_local=tracker.local_tokens)
+
+                        # Return formatted result as the actual response
+                        task.result = formatted_result
                         return audit_result
                     return {"score": 5.0}
 
                 await run_task_with_timing(task, main_task, audit_task, enable_audit=True)
 
-                # Update token tracker from response (estimate)
-                tracker = get_token_tracker()
+                # Display the professionally formatted result
                 if task.result:
-                    # Rough estimate: 4 chars per token
-                    estimated_tokens = len(task.result) // 4
-                    tracker.add_main(estimated_tokens)
+                    from rich.markdown import Markdown
+                    console.print(Markdown(task.result))
 
             else:
                 # Simple mode without audit

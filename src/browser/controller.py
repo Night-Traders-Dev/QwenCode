@@ -7,6 +7,8 @@ from playwright.async_api import async_playwright, BrowserContext, Page
 from config.config import BROWSER_DATA_DIR
 from ui.rich_ui import console
 from ui.live_render import C, LiveRenderer
+from tools.tools import dispatch_tool, print_tool_call, print_tool_result
+from browser.transcript_mirror import BrowserTranscriptMirror
 
 
 # ── browser controller ────────────────────────────────────────────────────────

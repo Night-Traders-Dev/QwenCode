@@ -1147,7 +1147,7 @@ class QwenBrowserController:
         console.print(
             f"[{C['warn']}]⚠  Reached max tool rounds ({self.MAX_TOOL_ROUNDS}) in browser mode.[/]"
         )
-        return self._renderer.answer_text or self._renderer.thinking_text
+        return self._renderer.answer_text or self._renderer.thinking_text or "" 
     async def _submit(self, page: "Page", text: str):
         textarea = await page.wait_for_selector(self.SEL_TEXTAREA, timeout=10_000)
         await textarea.fill(text)

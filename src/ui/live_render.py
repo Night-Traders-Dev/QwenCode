@@ -11,8 +11,10 @@ C = {
     "warn":   "#FBBF24",
     "err":    "#F87171",
     "dim":    "#6B7280",
+    "text":   "#e5e9f0",
     "tool":   "#34D399",
     "code":   "#F59E0B",
+    "panel":  "#1b2330",
 }
 
 VERSION = "0.5.0"

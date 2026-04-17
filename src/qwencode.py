@@ -566,14 +566,34 @@ class LiveRenderer:
     def __init__(self):
         self.full_text = ""
         self._printed = 0
+        self._last_mode = None
 
     def reset(self):
         self.full_text = ""
         self._printed = 0
+        self._last_mode = None
+
+    def _print_chunk(self, chunk: str):
+        if not chunk:
+            return
+
+        lines = chunk.splitlines(keepends=True)
+        for line in lines:
+            stripped = line.strip().lower()
+            if "thinking" in stripped and len(stripped) < 80:
+                if self._last_mode != "think":
+                    console.print()
+                    self._last_mode = "think"
+                console.print(f"[{C['dim']}]{line}[/{C['dim']}]", end="", markup=False)
+            else:
+                if self._last_mode != "answer":
+                    self._last_mode = "answer"
+                console.print(line, end="", markup=False)
 
     def update(self, new_text: str):
-        if not new_text:
+        if new_text is None:
             return
+
         if len(new_text) < self._printed:
             self.full_text = new_text
             self._printed = 0
@@ -582,15 +602,128 @@ class LiveRenderer:
 
         delta = self.full_text[self._printed:]
         if delta:
-            console.print(delta, end="", markup=False)
+            self._print_chunk(delta)
             self._printed = len(self.full_text)
 
     def finish(self):
         if self._printed < len(self.full_text):
-            console.print(self.full_text[self._printed:], end="", markup=False)
+            self._print_chunk(self.full_text[self._printed:])
             self._printed = len(self.full_text)
 
 
+# ── transcript mirror ─────────────────────────────────────────────────────────
+class BrowserTranscriptMirror:
+    ROOT_JS = r"""
+    () => {
+        const roots = [
+            document.querySelector('main'),
+            document.querySelector('[role="main"]'),
+            document.querySelector('#app'),
+            document.body,
+        ].filter(Boolean);
+
+        const cleanup = (root) => {
+            const clone = root.cloneNode(true);
+            const removeSelectors = [
+                'textarea',
+                'input',
+                'button',
+                'nav',
+                'aside',
+                'header',
+                'footer',
+                '[contenteditable="true"]',
+                '[role="textbox"]',
+                '[class*="sidebar"]',
+                '[class*="menu"]',
+                '[class*="toolbar"]',
+                '[class*="search"]',
+            ];
+            for (const sel of removeSelectors) {
+                clone.querySelectorAll(sel).forEach(n => n.remove());
+            }
+            return (clone.innerText || clone.textContent || '')
+                .replace(/\u00a0/g, ' ')
+                .replace(/[ \t]+\n/g, '\n')
+                .replace(/\n{3,}/g, '\n\n')
+                .trim();
+        };
+
+        for (const root of roots) {
+            const txt = cleanup(root);
+            if (txt) return txt;
+        }
+        return '';
+    }
+    """
+
+    def __init__(self, page: "Page", prompt: str):
+        self.page = page
+        self.prompt = (prompt or "").strip()
+        self.baseline = ""
+        self.last_appended = ""
+
+    async def snapshot_before_submit(self):
+        self.baseline = await self._extract_transcript()
+        self.last_appended = ""
+
+    async def _extract_transcript(self) -> str:
+        try:
+            text = await self.page.evaluate(self.ROOT_JS)
+            return (text or "").strip()
+        except Exception:
+            return ""
+
+    def _strip_prompt_echo(self, text: str) -> str:
+        t = text.lstrip()
+        if self.prompt and t.startswith(self.prompt):
+            t = t[len(self.prompt):].lstrip()
+        return t
+
+    def _extract_appended(self, current: str) -> str:
+        if not current:
+            return ""
+
+        if self.baseline and current.startswith(self.baseline):
+            appended = current[len(self.baseline):]
+        else:
+            appended = current
+
+        appended = self._strip_prompt_echo(appended)
+        return appended.strip()
+
+    async def stream_until_stable(
+        self,
+        renderer: LiveRenderer,
+        timeout_ms: int = 120_000,
+        poll_interval: float = 0.10,
+        stable_seconds: float = 1.5,
+    ) -> str:
+        renderer.reset()
+        start = time.monotonic()
+        last_change = start
+        last_seen = ""
+
+        while (time.monotonic() - start) * 1000 < timeout_ms:
+            current = await self._extract_transcript()
+            appended = self._extract_appended(current)
+
+            if appended != last_seen:
+                renderer.update(appended)
+                last_seen = appended
+                last_change = time.monotonic()
+
+            if appended and (time.monotonic() - last_change) >= stable_seconds:
+                break
+
+            await asyncio.sleep(poll_interval)
+
+        renderer.finish()
+        self.last_appended = last_seen
+        return last_seen
+
+
+# ── browser controller ────────────────────────────────────────────────────────
 class QwenBrowserController:
     SEL_TEXTAREA = "textarea"
     SEL_SEND_BTN = 'button[aria-label="Send"]'
@@ -599,14 +732,6 @@ class QwenBrowserController:
     RESPONSE_TIMEOUT_MS = 120_000
     LOGIN_TIMEOUT_MS = 120_000
     MAX_TOOL_ROUNDS = 20
-
-    ASSISTANT_CANDIDATES = [
-        ".message--assistant",
-        "[data-role='assistant']",
-        ".assistant-message",
-        ".markdown",
-        ".prose",
-    ]
 
     TOOL_CALL_CANDIDATES = [
         "[data-tool]",
@@ -624,22 +749,101 @@ class QwenBrowserController:
 
     async def start(self):
         self._pw = await async_playwright().start()
-        Path(self._data_dir).mkdir(parents=True, exist_ok=True)
-        self._context = await self._pw.chromium.launch_persistent_context(
-            self._data_dir,
-            headless=self._headless,
-            channel="chrome",
-            viewport={"width": 1280, "height": 900},
-            args=["--disable-blink-features=AutomationControlled"],
-        )
+        base_dir = Path(self._data_dir)
+        base_dir.mkdir(parents=True, exist_ok=True)
+
+        launch_error = None
+
+        # First try the normal persistent profile
+        try:
+            self._context = await self._launch_context(base_dir)
+        except Exception as e:
+            launch_error = e
+            msg = str(e)
+
+            if "ProcessSingleton" in msg or "SingletonLock" in msg or "profile is already in use" in msg:
+                console.print(
+                    f"[{C['warn']}]Profile is locked; attempting recovery...[/]"
+                )
+
+                if self._profile_seems_idle(base_dir):
+                    self._cleanup_profile_locks(base_dir)
+                    try:
+                        self._context = await self._launch_context(base_dir)
+                        launch_error = None
+                    except Exception as e2:
+                        launch_error = e2
+
+                if launch_error is not None:
+                    fallback_dir = self._make_fallback_profile_dir()
+                    console.print(
+                        f"[{C['warn']}]Using temporary browser profile:[/] {fallback_dir}"
+                    )
+                    self._context = await self._launch_context(fallback_dir)
+            else:
+                raise
+
+        if self._context is None:
+            raise launch_error or RuntimeError("Failed to launch browser context")
+
         pages = self._context.pages
         self._page = pages[0] if pages else await self._context.new_page()
 
+    async def _launch_context(self, profile_dir: Path):
+        return await self._pw.chromium.launch_persistent_context(
+            str(profile_dir),
+            headless=self._headless,
+            channel="chrome",
+            viewport={"width": 1280, "height": 900},
+            args=[
+                "--disable-blink-features=AutomationControlled",
+                "--no-first-run",
+                "--no-default-browser-check",
+            ],
+        )
+
+    def _profile_seems_idle(self, profile_dir: Path) -> bool:
+        try:
+            result = subprocess.run(
+                ["pgrep", "-af", str(profile_dir)],
+                capture_output=True,
+                text=True,
+                timeout=3,
+            )
+            return result.returncode != 0
+        except Exception:
+            return True
+
+    def _cleanup_profile_locks(self, profile_dir: Path):
+        lock_names = [
+            "SingletonLock",
+            "SingletonCookie",
+            "SingletonSocket",
+        ]
+        for name in lock_names:
+            p = profile_dir / name
+            if p.exists() or p.is_symlink():
+                try:
+                    p.unlink()
+                    console.print(f"[{C['dim']}]Removed stale lock {p}[/]")
+                except Exception as e:
+                    console.print(f"[{C['warn']}]Could not remove {p}: {e}[/]")
+
+    def _make_fallback_profile_dir(self) -> Path:
+        stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        fallback = Path(self._data_dir).parent / f"browser_data_run_{stamp}"
+        fallback.mkdir(parents=True, exist_ok=True)
+        return fallback
+
+
     async def close(self):
-        if self._context:
-            await self._context.close()
-        if self._pw:
-            await self._pw.stop()
+        try:
+            if self._context:
+                await self._context.close()
+        finally:
+            if self._pw:
+                await self._pw.stop()
+
 
     async def ensure_logged_in(self):
         page = self._page
@@ -672,10 +876,15 @@ class QwenBrowserController:
         page = self._page
         tool_history: list[tuple[str, dict, str]] = []
 
+        mirror = BrowserTranscriptMirror(page, prompt)
+        await mirror.snapshot_before_submit()
         await self._submit(page, prompt)
 
-        for round_idx in range(self.MAX_TOOL_ROUNDS):
-            final_text = await self._stream_current_response(page)
+        for _round_idx in range(self.MAX_TOOL_ROUNDS):
+            final_text = await mirror.stream_until_stable(
+                self._renderer,
+                timeout_ms=self.RESPONSE_TIMEOUT_MS,
+            )
             console.print()
 
             pending = await self._collect_pending_tool_calls(page)
@@ -696,6 +905,8 @@ class QwenBrowserController:
                     pass
 
             console.print(f"\n[{C['brand']}]◆ Qwen Coder (browser)[/] ", end="")
+            mirror = BrowserTranscriptMirror(page, "\n\n".join(result_parts))
+            await mirror.snapshot_before_submit()
             await self._submit(page, "\n\n".join(result_parts))
 
         console.print(
@@ -712,50 +923,6 @@ class QwenBrowserController:
         except Exception:
             await textarea.press("Enter")
 
-    async def _find_latest_assistant_text(self, page: "Page") -> str:
-        js = """
-        (selectors) => {
-            for (const sel of selectors) {
-                const nodes = Array.from(document.querySelectorAll(sel));
-                if (nodes.length) {
-                    const texts = nodes
-                        .map(n => (n.innerText || n.textContent || "").trim())
-                        .filter(Boolean);
-                    if (texts.length) return texts[texts.length - 1];
-                }
-            }
-            return "";
-        }
-        """
-        try:
-            text = await page.evaluate(js, self.ASSISTANT_CANDIDATES)
-            return text or ""
-        except Exception:
-            return ""
-
-    async def _stream_current_response(self, page: "Page") -> str:
-        self._renderer.reset()
-
-        start = time.monotonic()
-        last_change = time.monotonic()
-        last_text = ""
-
-        while (time.monotonic() - start) * 1000 < self.RESPONSE_TIMEOUT_MS:
-            cur = await self._find_latest_assistant_text(page)
-
-            if cur and cur != last_text:
-                self._renderer.update(cur)
-                last_text = cur
-                last_change = time.monotonic()
-
-            if cur and (time.monotonic() - last_change) > 1.2:
-                break
-
-            await asyncio.sleep(0.12)
-
-        self._renderer.finish()
-        return self._renderer.full_text
-
     async def _collect_pending_tool_calls(
         self, page: "Page"
     ) -> list[tuple[Any, str, dict]]:
@@ -765,6 +932,7 @@ class QwenBrowserController:
                 nodes = await page.query_selector_all(sel)
             except Exception:
                 continue
+
             for node in nodes:
                 try:
                     if await node.get_attribute("data-result-sent"):
@@ -778,12 +946,14 @@ class QwenBrowserController:
                     pending.append((node, tool_name, args))
                 except Exception:
                     continue
+
             if pending:
                 break
+
         return pending
 
 
-
+# ── browser session ───────────────────────────────────────────────────────────
 async def browser_session(cfg: dict, headless: bool = False):
     controller = QwenBrowserController(
         headless=headless,
@@ -820,6 +990,8 @@ async def browser_session(cfg: dict, headless: bool = False):
     finally:
         await controller.close()
         console.print(f"[{C['dim']}]Browser closed. Bye![/]")
+
+
 
 
 # ── banners ───────────────────────────────────────────────────────────────────

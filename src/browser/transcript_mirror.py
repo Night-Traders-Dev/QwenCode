@@ -150,6 +150,7 @@ class BrowserTranscriptMirror:
             if (!el || !isVisible(el)) return;
             const txt = cleanText(el);
             if (!txt || txt.length < 40) return;
+            // Check for exact duplicate text - skip if already seen
             if (seenAnswer.has(txt)) return;
             seenAnswer.add(txt);
 
@@ -172,6 +173,14 @@ class BrowserTranscriptMirror:
             });
         };
 
+        // Track unique texts to avoid duplicates from overlapping selectors
+        const uniqueTexts = new Set();
+        const filterDuplicate = (candidate) => {
+            if (uniqueTexts.has(candidate.text)) return false;
+            uniqueTexts.add(candidate.text);
+            return true;
+        };
+
         for (const sel of answerSelectors) {
             scope.querySelectorAll(sel).forEach(el => pushCandidate(el, sel));
         }
@@ -181,8 +190,10 @@ class BrowserTranscriptMirror:
         }
 
         answerCandidates.sort((a, b) => b.score - a.score);
-        let answerText = answerCandidates.length ? answerCandidates[0].text : '';
-        let answerMethod = answerCandidates.length ? answerCandidates[0].method : 'none';
+        // Filter out duplicate texts after sorting (keep highest scored unique text)
+        const uniqueCandidates = answerCandidates.filter(filterDuplicate);
+        let answerText = uniqueCandidates.length ? uniqueCandidates[0].text : '';
+        let answerMethod = uniqueCandidates.length ? uniqueCandidates[0].method : 'none';
 
         if (answerText && /thinking completed/i.test(answerText)) {
             const parts = answerText.split(/thinking completed(s*[›>])?/i);
@@ -305,6 +316,7 @@ class BrowserTranscriptMirror:
         waiting_after_thinking = None
         started = False
         last = dict(self._baseline)
+        last_answer_len = 0
 
         while (time.monotonic() - start) * 1000 < timeout_ms:
             state = self._extract_state(await self._probe())
@@ -326,11 +338,18 @@ class BrowserTranscriptMirror:
                 started = True
 
             if started:
-                renderer.update(
-                    thinking_text=state["thinking_text"],
-                    answer_text=state["answer_text"],
-                    thinking_done=state["thinking_done"],
-                )
+                # Only update if answer is growing or thinking text changed
+                # This prevents re-printing when the same content is detected
+                answer_growing = len(state["answer_text"]) > last_answer_len
+                thinking_changed = state["thinking_text"] != last["thinking_text"]
+                
+                if answer_growing or thinking_changed or not last_answer_len:
+                    renderer.update(
+                        thinking_text=state["thinking_text"],
+                        answer_text=state["answer_text"],
+                        thinking_done=state["thinking_done"],
+                    )
+                    last_answer_len = len(state["answer_text"])
 
                 if changed:
                     last_change = now

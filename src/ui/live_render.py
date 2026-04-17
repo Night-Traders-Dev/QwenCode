@@ -4,7 +4,7 @@ from textwrap import TextWrapper
 from tools.definitions import TOOLS
 from tools.tools import dispatch_tool, print_tool_call, print_tool_result
 from ui.rich_ui import console
-from config.config import _MISSING, CONFIG_DIR, CONFIG_FILE, HISTORY_FILE, DASHSCOPE_BASE_URL, DEFAULT_MODEL, LOCAL_BASE_URL, LOCAL_API_KEY
+from config.config import MISSING, CONFIG_DIR, CONFIG_FILE, HISTORY_FILE, DASHSCOPE_BASE_URL, DEFAULT_MODEL, LOCAL_BASE_URL, LOCAL_API_KEY
      
 
 

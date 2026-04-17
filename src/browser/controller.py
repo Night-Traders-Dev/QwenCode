@@ -4,8 +4,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
 from ui.live_render import LiveRenderer
-from tools.definitions import TOOLS
-from tools.tools import dispatch_tool, print_tool_call, print_tool_result
 from playwright.async_api import async_playwright, BrowserContext, Page
 
 

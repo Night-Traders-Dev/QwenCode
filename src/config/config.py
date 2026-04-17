@@ -1,5 +1,9 @@
-_MISSING = []
+from pathlib import Path
+import json
+import os
+
 # ── constants ─────────────────────────────────────────────────────────────────
+MISSING = []
 VERSION          = "0.5.0"
 CONFIG_DIR       = Path.home() / ".qwencode"
 CONFIG_FILE      = CONFIG_DIR / "config.json"
@@ -10,6 +14,7 @@ LOCAL_BASE_URL     = "http://localhost:11434/v1"
 LOCAL_API_KEY      = "ollama"
 
 MAX_TOOL_ITERS   = 20
+MAX_OUTPUT_CHARS = 10000
 
 
 # ── config ────────────────────────────────────────────────────────────────────

@@ -32,41 +32,28 @@ Requirements:
 import argparse
 import asyncio
 import json
-import os
-import re
-import subprocess
 import sys
-import textwrap
-import time
+
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Optional
 from tools.definitions import TOOLS
-from openai import OpenAI, APIError, APIConnectionError
-from rich.console import Console
-from rich.panel import Panel
-from rich.table import Table
-from rich import box
+from config.config import MISSING, HISTORY_FILE, LOCAL_BASE_URL, LOCAL_API_KEY, load_config, save_config
 from browser.session import browser_session
 
 
 
 # ── dependency check ──────────────────────────────────────────────────────────
-_MISSING = []
 try:
     from openai import OpenAI, APIError, APIConnectionError
 except ImportError:
-    _MISSING.append("openai")
+    MISSING.append("openai")
 try:
-    from rich.console import Console
-    from rich.markdown import Markdown
     from rich.panel import Panel
-    from rich.syntax import Syntax
     from rich.table import Table
-    from rich.text import Text
     from rich import box
 except ImportError:
-    _MISSING.append("rich")
+    MISSING.append("rich")
 try:
     from prompt_toolkit import PromptSession
     from prompt_toolkit.history import FileHistory
@@ -74,11 +61,11 @@ try:
     from prompt_toolkit.formatted_text import HTML
     from prompt_toolkit.key_binding import KeyBindings
 except ImportError:
-    _MISSING.append("prompt_toolkit")
+    MISSING.append("prompt_toolkit")
 
-if _MISSING:
-    print(f"[error] Missing packages: {', '.join(_MISSING)}")
-    print(f"  pip install {' '.join(_MISSING)}")
+if MISSING:
+    print(f"[error] Missing packages: {', '.join(MISSING)}")
+    print(f"  pip install {' '.join(MISSING)}")
     sys.exit(1)
 
 # ── colour palette ────────────────────────────────────────────────────────────
@@ -122,142 +109,7 @@ Guidelines:
 - Respond in Markdown when appropriate.
 """
 
-# ── config ────────────────────────────────────────────────────────────────────
-DEFAULT_CONFIG = {
-    "base_url":    DASHSCOPE_BASE_URL,
-    "api_key":     "",
-    "model":       DEFAULT_MODEL,
-    "temperature": 0.7,
-    "max_tokens":  8192,
-    "stream":      True,
-}
 
-def load_config() -> dict:
-    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-    cfg = dict(DEFAULT_CONFIG)
-    if CONFIG_FILE.exists():
-        try:
-            saved = json.loads(CONFIG_FILE.read_text())
-            cfg.update(saved)
-        except Exception:
-            pass
-    for env, key in [
-        ("DASHSCOPE_API_KEY", "api_key"),
-        ("OPENAI_API_KEY",    "api_key"),
-        ("QWEN_BASE_URL",     "base_url"),
-        ("QWEN_MODEL",        "model"),
-    ]:
-        v = os.environ.get(env)
-        if v:
-            cfg[key] = v
-    return cfg
-
-def save_config(cfg: dict):
-    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-    out = {k: v for k, v in cfg.items() if k != "api_key" or v}
-    CONFIG_FILE.write_text(json.dumps(out, indent=2))
-
-
-
-
-# ── streaming completion (API mode) ───────────────────────────────────────────
-def stream_completion(
-    client: OpenAI, cfg: dict, messages: list
-) -> tuple[str, list]:
-    full_text = ""
-    tool_call_accum: dict[int, dict] = {}
-
-    console.print(f"\n[{C['brand']}]◆ Qwen Coder[/] ", end="")
-
-    with client.chat.completions.create(
-        model=cfg["model"],
-        messages=messages,
-        tools=TOOLS,
-        tool_choice="auto",
-        temperature=cfg["temperature"],
-        max_tokens=cfg["max_tokens"],
-        stream=True,
-    ) as stream:
-        for chunk in stream:
-            delta = chunk.choices[0].delta if chunk.choices else None
-            if delta is None:
-                continue
-            if delta.content:
-                console.print(delta.content, end="", markup=False)
-                full_text += delta.content
-            if delta.tool_calls:
-                for tc in delta.tool_calls:
-                    idx = tc.index
-                    if idx not in tool_call_accum:
-                        tool_call_accum[idx] = {"id": "", "name": "", "args": ""}
-                    if tc.id:
-                        tool_call_accum[idx]["id"] += tc.id
-                    if tc.function and tc.function.name:
-                        tool_call_accum[idx]["name"] += tc.function.name
-                    if tc.function and tc.function.arguments:
-                        tool_call_accum[idx]["args"] += tc.function.arguments
-
-    console.print()
-    tool_calls = [
-        {
-            "id":        acc["id"] or f"call_{idx}",
-            "name":      acc["name"],
-            "args_json": acc["args"],
-        }
-        for idx, acc in sorted(tool_call_accum.items())
-    ]
-    return full_text, tool_calls
-
-def agentic_turn_api(
-    client: OpenAI, cfg: dict, messages: list
-) -> list:
-    for iteration in range(MAX_TOOL_ITERS):
-        text, tool_calls = stream_completion(client, cfg, messages)
-
-        if not tool_calls:
-            if text and not text.endswith("\n"):
-                console.print()
-            messages.append({"role": "assistant", "content": text or ""})
-            return messages
-
-        assistant_msg: dict[str, Any] = {
-            "role":    "assistant",
-            "content": text or "",          # never None — some endpoints reject it
-            "tool_calls": [
-                {
-                    "id":       tc["id"],
-                    "type":     "function",
-                    "function": {
-                        "name":      tc["name"],
-                        "arguments": tc["args_json"],
-                    },
-                }
-                for tc in tool_calls
-            ],
-        }
-        messages.append(assistant_msg)
-
-        console.print(f"\n[{C['accent']}]⚙  Tools[/]")
-        tool_results = []
-        for tc in tool_calls:
-            try:
-                args = json.loads(tc["args_json"] or "{}")
-            except json.JSONDecodeError:
-                args = {}
-            print_tool_call(tc["name"], args)
-            result = dispatch_tool(tc["name"], args)
-            print_tool_result(result, ok=not result.startswith("[error]"))
-            tool_results.append({
-                "role":         "tool",
-                "tool_call_id": tc["id"],
-                "content":      result,
-            })
-        messages.extend(tool_results)
-
-    console.print(
-        f"[{C['warn']}]⚠  Reached max tool iterations ({MAX_TOOL_ITERS})[/]"
-    )
-    return messages
 
 # ── cookie import utility ─────────────────────────────────────────────────────
 def import_cookies_from_json(cookie_file: str, data_dir: Path):

@@ -96,13 +96,13 @@ async def browser_session(cfg: dict, headless: bool = False):
 
                 async def main_task():
                     console.print(f"\n[{C['brand']}]◆ Qwen Coder (browser)[/] ", end="")
-                    result = await controller.send_prompt_and_get_response(user_input)
+                    result_text, _tool_history = await controller.send_prompt_and_get_response(user_input)
                     # Estimate tokens from response
-                    if result:
-                        estimated_tokens = len(result) // 4
+                    if result_text:
+                        estimated_tokens = max(1, len(result_text) // 4)
                         tracker.add_main(estimated_tokens)
                         panel.update(tokens_main=tracker.main_tokens)
-                    return result
+                    return result_text
 
                 async def audit_task(result):
                     if local_llm_client and local_llm_client.is_available():
@@ -139,7 +139,8 @@ async def browser_session(cfg: dict, headless: bool = False):
                 # Display the professionally formatted result
                 if task.result:
                     from rich.markdown import Markdown
-                    console.print(Markdown("\n".join(str(item) for item in task.result)))
+                    rendered = task.result if isinstance(task.result, str) else str(task.result)
+                    console.print(Markdown(rendered))
 
 
             else:

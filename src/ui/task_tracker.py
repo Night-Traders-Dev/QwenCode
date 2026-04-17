@@ -49,9 +49,8 @@ class PanelUpdate:
 class StatusPanel:
     """Live bottom panel showing task metrics, timing, and status.
 
-    Uses Rich's Live display with auto-refresh to ensure timer, clock, and
+    Uses Rich's Live display with a dynamic renderable so timer, clock, and
     metrics update in real-time without blocking the main processing flow.
-    The panel render always computes fresh time values independently.
     """
 
     def __init__(self):
@@ -67,6 +66,18 @@ class StatusPanel:
         # Thread-safe state access
         self._state_lock = Lock()
         self._live: Optional[Live] = None
+
+    def __rich__(self) -> Panel:
+        return self._generate_panel()
+
+    def _refresh_live(self):
+        """Request an immediate repaint of the live panel."""
+        if not self._live:
+            return
+        try:
+            self._live.refresh()
+        except Exception:
+            pass
 
     def _get_elapsed(self) -> str:
         """Get formatted elapsed time."""
@@ -98,6 +109,13 @@ class StatusPanel:
 
     def _generate_panel(self) -> Panel:
         """Generate the status panel content."""
+        with self._state_lock:
+            current_stage = self.current_stage
+            current_tool = self.current_tool
+            tokens_main = self.tokens_main
+            tokens_local = self.tokens_local
+            step_name = self.step_name
+
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         elapsed = self._get_elapsed()
         step_elapsed = self._get_step_elapsed()
@@ -116,23 +134,23 @@ class StatusPanel:
             "failed": C["err"],
             "idle": C["dim"]
         }
-        stage_color = stage_colors.get(self.current_stage, C["dim"])
-        status_parts.append(f"[{stage_color}]● {self.current_stage}[/{stage_color}]")
+        stage_color = stage_colors.get(current_stage, C["dim"])
+        status_parts.append(f"[{stage_color}]● {current_stage}[/{stage_color}]")
 
         # Current tool if applicable
-        if self.current_tool:
-            status_parts.append(f"[{C['tool']}]🔧 {self.current_tool}[/{C['tool']}]")
+        if current_tool:
+            status_parts.append(f"[{C['tool']}]🔧 {current_tool}[/{C['tool']}]")
 
         # Step info
-        if self.step_name:
-            status_parts.append(f"[{C['dim']}]⏱ {self.step_name} ({step_elapsed})[/{C['dim']}]")
+        if step_name:
+            status_parts.append(f"[{C['dim']}]⏱ {step_name} ({step_elapsed})[/{C['dim']}]")
 
         # Token counts
         token_parts = []
-        if self.tokens_main > 0:
-            token_parts.append(f"Main: [bold]{self.tokens_main:,}[/]")
-        if self.tokens_local > 0:
-            token_parts.append(f"Local: [bold]{self.tokens_local:,}[/]")
+        if tokens_main > 0:
+            token_parts.append(f"Main: [bold]{tokens_main:,}[/]")
+        if tokens_local > 0:
+            token_parts.append(f"Local: [bold]{tokens_local:,}[/]")
         if token_parts:
             status_parts.append(f"[{C['code']}]📊 {' | '.join(token_parts)}[/{C['code']}]")
 
@@ -155,24 +173,30 @@ class StatusPanel:
     def start(self, prompt: str = ""):
         """Start the status panel with Rich Live display.
 
-        The Live display auto-refreshes at a fixed rate, ensuring timer and clock
-        update in real-time regardless of any blocking operations in the main code.
+        The Live display refreshes the current renderable at a fixed rate, while
+        ``__rich__`` regenerates the panel from the latest state on each repaint.
         """
-        self.task_start_time = time.time()
-        self.is_running = True
-        self.current_stage = "initializing"
-        self.step_start = time.time()
+        if self._live:
+            self.stop()
 
-        # Create and start live display with high refresh rate for smooth updates
-        # auto_refresh=True means Rich will automatically call _generate_panel()
-        # at refresh_per_second rate, always getting fresh time values
+        with self._state_lock:
+            self.task_start_time = time.time()
+            self.is_running = True
+            self.current_stage = "initializing"
+            self.current_tool = ""
+            self.tokens_main = 0
+            self.tokens_local = 0
+            self.step_name = ""
+            self.step_start = time.time()
+
         self._live = Live(
-            self._generate_panel(),
+            self,
             console=console,
             refresh_per_second=4,  # 4 FPS - smooth but not excessive
             auto_refresh=True
         )
         self._live.start()
+        self._refresh_live()
 
     def update(self,
                stage: str = None,
@@ -201,6 +225,8 @@ class StatusPanel:
                 self.step_name = step
                 self.step_start = time.time()
 
+        self._refresh_live()
+
     def stop(self):
         """Stop the live display."""
         self.is_running = False
@@ -217,10 +243,8 @@ class StatusPanel:
         with self._state_lock:
             self.current_stage = final_stage
 
-        # Brief pause to show final state, then stop
-        if self._live:
-            time.sleep(0.3)
-            self.stop()
+        self._refresh_live()
+        self.stop()
 
 
 # Global status panel instance

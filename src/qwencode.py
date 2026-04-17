@@ -489,9 +489,8 @@ def agentic_turn_api(
         text, tool_calls = stream_completion(client, cfg, messages)
 
         if not tool_calls:
-            if text.strip():
+            if text and not text.endswith("\n"):
                 console.print()
-                render_assistant(text)
             messages.append({"role": "assistant", "content": text or ""})
             return messages
 
@@ -622,7 +621,10 @@ class LiveRenderer:
             self._answer_printed = len(answer_text)
 
     def finish(self):
-        pass
+        if self.answer_text and not self.answer_text.endswith("\n"):
+            console.print()
+        elif self.thinking_text and not self.thinking_text.endswith("\n"):
+            console.print()
 
 
 # ── transcript mirror ─────────────────────────────────────────────────────────
@@ -638,6 +640,7 @@ class BrowserTranscriptMirror:
             .replace(/\u00A0/g, ' ')
             .replace(/\r\n?/g, '\n')
             .replace(/[ \t]+/g, ' ')
+            .replace(/ *\n */g, '\n')
             .replace(/\n{3,}/g, '\n\n')
             .trim();
 
@@ -665,12 +668,26 @@ class BrowserTranscriptMirror:
             ).forEach(n => n.remove());
 
             const raw = normalize(clone.innerText || clone.textContent || '');
-            const lines = raw
-                .split('\n')
-                .map(x => x.trim())
-                .filter(x => x && !badLine.test(x) && !skipLine.test(x));
+            const cleaned = [];
+            let lastBlank = false;
 
-            return normalize(lines.join('\n'));
+            for (const part of raw.split('\n')) {
+                const line = part.trim();
+                if (!line) {
+                    if (!lastBlank && cleaned.length) {
+                        cleaned.push('');
+                    }
+                    lastBlank = true;
+                    continue;
+                }
+                if (badLine.test(line) || skipLine.test(line)) {
+                    continue;
+                }
+                cleaned.push(line);
+                lastBlank = false;
+            }
+
+            return normalize(cleaned.join('\n'));
         };
 
         const buttons = Array.from(document.querySelectorAll('button')).filter(isVisible);
@@ -841,21 +858,26 @@ class BrowserTranscriptMirror:
 
     def _normalize_text(self, text: str) -> str:
         text = (text or "").replace(" ", " ")
+        text = text.replace("\r\n", "\n").replace("\r", "\n")
         lines = []
+        last_blank = False
         for raw in text.splitlines():
             line = raw.strip()
             if not line:
-                if lines and lines[-1] != "":
+                if lines and not last_blank:
                     lines.append("")
+                last_blank = True
                 continue
             if re.match(r"^(Skip|Copy|Share|Regenerate|Sources?|Search(ing)? the web|Auto)$", line, re.I):
                 continue
             if re.match(r"^AI-generated content may not be accurate.?$", line, re.I):
                 continue
             lines.append(line)
+            last_blank = False
         out = "\n".join(lines).strip()
-        out = re.sub(r"\n{3,}", "\n\n", out)
         out = re.sub(r"[ \t]+", " ", out)
+        out = re.sub(r" *\n *", "\n", out)
+        out = re.sub(r"\n{3,}", "\n\n", out)
         return out
 
     def _strip_prompt_echo(self, text: str) -> str:

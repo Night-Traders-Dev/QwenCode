@@ -41,8 +41,16 @@ class LiveRenderer:
     def _delta(self, old: str, new: str) -> str:
         if not new:
             return ""
+        if not old:
+            return new
         if new.startswith(old):
             return new[len(old):]
+        # If texts diverge, find common prefix and return only the new part
+        # This handles cases where normalization or whitespace differs slightly
+        for i in range(min(len(old), len(new)), 0, -1):
+            if new.startswith(old[:i]):
+                return new[i:]
+        # No common prefix found, return entire new text
         return new
 
     def update(

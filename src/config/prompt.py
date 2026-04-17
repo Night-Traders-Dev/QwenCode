@@ -18,17 +18,27 @@ from ui.live_render import C
 try:
     from memory.store import MemoryStore
     from memory.local_llm import get_local_llm
+    from ui.task_tracker import (
+        get_task_queue, get_token_tracker, get_thinking_ui,
+        Task, TaskQueue, reset_trackers
+    )
     MEMORY_AVAILABLE = True
 except ImportError:
     MEMORY_AVAILABLE = False
     MemoryStore = None
     get_local_llm = None
+    get_task_queue = None
+    get_token_tracker = None
+    get_thinking_ui = None
+    Task = None
+    TaskQueue = None
+    reset_trackers = None
 
 # ── Custom completer for slash commands ───────────────────────────────────────
 class SlashCompleter(Completer):
     SLASH_COMMANDS = [
         "/help", "/clear", "/model", "/tools", "/config", "/exit",
-        "/memory", "/audit", "/local"
+        "/memory", "/audit", "/local", "/queue", "/tokens"
     ]
 
     def get_completions(self, document, complete_event):
@@ -54,6 +64,8 @@ def print_help():
         ("/memory",            "Show memory status and contents"),
         ("/audit [text]",      "Audit text using local LLM"),
         ("/local [text]",      "Send text to local LLM"),
+        ("/queue",             "Show task queue status"),
+        ("/tokens",            "Show token usage statistics"),
         ("/exit",              "Quit the session"),
         ("Ctrl-D",             "Quit"),
         ("Ctrl-C",             "Cancel current input"),
@@ -177,6 +189,35 @@ def handle_slash(
                     console.print(f"[{C['error']}]Error: {e}[/]")
             else:
                 console.print(f"[{C['dim']}]Usage: /local <text to send to local LLM>[/]")
+    elif verb == "/queue":
+        if not MEMORY_AVAILABLE or not get_task_queue:
+            console.print(f"[{C['warn']}]Task queue not available[/]")
+        else:
+            queue = get_task_queue()
+            t = Table(box=SIMPLE, show_header=False)
+            t.add_column(style=C["accent"])
+            t.add_column(style=C["dim"])
+            t.add_row("Pending tasks:", str(queue.pending_count))
+            if queue.current:
+                t.add_row("Current task:", queue.current.id)
+                t.add_row("Status:", queue.current.status.value)
+                t.add_row("Duration:", queue.current.format_total_duration())
+                if queue.current.audit_score is not None:
+                    color = C["ok"] if queue.current.audit_score >= 7 else C["warn"] if queue.current.audit_score >= 5 else C["err"]
+                    t.add_row("Audit score:", f"[{color}]{queue.current.audit_score:.1f}/10[/]")
+            console.print(Panel(t, title="Task Queue", border_style=C["dim"]))
+    elif verb == "/tokens":
+        if not MEMORY_AVAILABLE or not get_token_tracker:
+            console.print(f"[{C['warn']}]Token tracker not available[/]")
+        else:
+            tracker = get_token_tracker()
+            t = Table(box=SIMPLE, show_header=False)
+            t.add_column(style=C["accent"])
+            t.add_column(style=C["dim"])
+            t.add_row("Main LLM tokens:", f"{tracker.main_tokens:,}")
+            t.add_row("Local LLM tokens:", f"{tracker.local_tokens:,}")
+            t.add_row("Total tokens:", f"{tracker.total:,}")
+            console.print(Panel(t, title="Token Usage", border_style=C["dim"]))
     else:
         console.print(
             f"[{C['warn']}]Unknown command: {verb}[/]  (try /help)"

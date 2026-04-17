@@ -12,6 +12,9 @@ A powerful AI coding harness that leverages Qwen Coder models for interactive de
   - Prompt/response auditing for quality assurance
   - Auxiliary tasks while main model works
   - Summarization and key point extraction
+- **Task Tracking & Timing**: Non-blocking timers, step-level timing breakdown, task queue management
+- **Live Token Usage**: Real-time token tracking for both main and local LLMs
+- **Thinking UI**: Claude Code-style thinking visualization with live progress indicators
 - **Fish-Shell Style UX**: Command history suggestions and tab-completion for slash commands
 - **Rich Terminal UI**: Beautiful output with colors, panels, and live rendering
 
@@ -87,6 +90,8 @@ python src/qwencode.py --browser --headless
 | `/memory show` | Show recent messages |
 | `/audit <text>` | Audit text using local LLM |
 | `/local <text>` | Send text to local LLM |
+| `/queue` | Show task queue status with timing |
+| `/tokens` | Show token usage statistics |
 | `/exit` | Quit session |
 
 ### Keyboard Shortcuts
@@ -101,14 +106,16 @@ python src/qwencode.py --browser --headless
 
 Configuration is stored in `~/.qwencode/config.json`. You can also use environment variables:
 
-| Variable | Description |
-|----------|-------------|
-| `DASHSCOPE_API_KEY` | API key for DashScope/Qwen |
-| `OPENAI_API_KEY` | Alternative API key |
-| `QWEN_BASE_URL` | Custom API base URL |
-| `QWEN_MODEL` | Default model name |
-| `LOCAL_MODEL` | Local Ollama model (default: qwen3.5:4b) |
-| `MEMORY_DB_URL` | PostgreSQL connection URL |
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `DASHSCOPE_API_KEY` | API key for DashScope/Qwen | - |
+| `OPENAI_API_KEY` | Alternative API key | - |
+| `QWEN_BASE_URL` | Custom API base URL | https://dashscope-intl.aliyuncs.com/compatible-mode/v1 |
+| `QWEN_MODEL` | Default model name | qwen3-coder-plus |
+| `LOCAL_MODEL` | Local Ollama model | qwen3.5:4b |
+| `MEMORY_DB_URL` | PostgreSQL connection URL | (uses file-based) |
+| `LOCAL_ENABLED` | Enable local LLM integration | true |
+| `AUDIT_ENABLED` | Enable automatic response auditing | true |
 
 ## Memory System
 
@@ -118,37 +125,82 @@ The memory system provides persistent storage for:
 - **Tool Executions**: Log of all tool calls and results
 - **User Preferences**: Custom memories and settings
 - **Session Metadata**: Model info, timestamps, etc.
+- **Audit Results**: Quality scores and feedback from local LLM
 
 ### Storage Backends
 
 1. **File-based** (default): JSON files in `~/.qwencode/memory/`
 2. **PostgreSQL**: For multi-session, multi-user scenarios
 
-## Local LLM Features
+## Local LLM & Auditing
 
-When Ollama is running with qwen3.5:4b, you can:
+When Ollama is running with qwen3.5:4b, the system automatically:
+
+1. **Audits your prompts** before sending to the cloud model
+2. **Processes the response** through the local LLM
+3. **Scores accuracy and quality** on a 1-10 scale
+4. **Updates memory** with audit results for future reference
+
+### Manual Local LLM Commands
 
 - **Audit Prompts**: Get feedback on prompt clarity and safety
   ```
   /audit Write a function to delete all files
   ```
 
-- **Format Text**: Clean up raw output
-  ```python
-  from memory.local_llm import get_local_llm
-  llm = get_local_llm()
-  formatted = llm.format_text(raw_output, "markdown")
+- **Chat with Local LLM**: Direct interaction
+  ```
+  /local Explain quantum computing in simple terms
   ```
 
-- **Summarize Content**: Get concise summaries
-  ```python
-  summary = llm.summarize(long_text, max_length=100)
+- **View Token Usage**: Track consumption
+  ```
+  /tokens
   ```
 
-- **Extract Key Points**: Get bullet-point summaries
-  ```python
-  points = llm.extract_key_points(document)
+- **View Task Queue**: See current/pending tasks with timing
   ```
+  /queue
+  ```
+
+### Programmatic Usage
+
+```python
+from memory.local_llm import get_local_llm
+
+llm = get_local_llm()
+
+# Format text
+formatted = llm.format_text(raw_output, "markdown")
+
+# Audit a response
+audit = llm.audit_response(response, original_prompt)
+print(f"Quality score: {audit['score']}/10")
+
+# Summarize content
+summary = llm.summarize(long_text, max_length=100)
+
+# Extract key points
+points = llm.extract_key_points(document)
+```
+
+## Task Tracking & Timing
+
+The system includes comprehensive task tracking:
+
+- **Non-blocking timers**: Tasks run asynchronously with timing
+- **Step-level breakdown**: See time spent on each phase (processing, auditing, etc.)
+- **Task queue**: Multiple tasks can be queued and tracked
+- **Live status updates**: Real-time progress indicators
+
+### Thinking UI
+
+The Claude Code-style thinking UI shows:
+- Animated spinner during processing
+- Current step being executed
+- Step timing as each completes
+- Final summary with total time and token count
+- Audit score when available
 
 ## Tools
 
@@ -162,6 +214,9 @@ Available tools for the AI to use:
 | `list_directory` | List directory contents |
 | `search_files` | Search for patterns in files |
 | `glob_files` | Find files by glob pattern |
+| `web_search` | Search the web (browser mode) |
+| `web_extractor` | Extract content from URLs (browser mode) |
+| `code_interpreter` | Run Python code (browser mode) |
 
 ## Architecture
 
@@ -185,7 +240,27 @@ src/
 └── ui/
     ├── banner.py        # Welcome banner
     ├── live_render.py   # Live output rendering
-    └── rich_ui.py       # Rich console wrapper
+    ├── rich_ui.py       # Rich console wrapper
+    └── task_tracker.py  # Task timing & queue management
+```
+
+## Workflow
+
+```
+┌─────────────┐     ┌──────────────┐     ┌─────────────┐     ┌─────────────┐
+│ User Input  │ ──► │ Local Audit  │ ──► │ Cloud Model │ ──► │ Response    │
+└─────────────┘     └──────────────┘     └─────────────┘     └─────────────┘
+                           │                                       │
+                           │                                       ▼
+                    ┌──────▼──────┐                        ┌─────────────┐
+                    │ Score/Flags │                        │ Local Audit │
+                    └─────────────┘                        └─────────────┘
+                                                                   │
+                                                                   ▼
+                                                            ┌─────────────┐
+                                                            │ Store in    │
+                                                            │ Memory      │
+                                                            └─────────────┘
 ```
 
 ## Troubleshooting
@@ -195,6 +270,7 @@ src/
 - **Profile locked**: The system automatically handles profile locks, or uses a fallback profile
 - **Login required**: Complete OAuth in the browser window when prompted
 - **Headless failures**: Try without `--headless` for debugging
+- **Chrome not found**: Run `playwright install chrome`
 
 ### Local LLM Issues
 
@@ -206,6 +282,18 @@ src/
 
 - **PostgreSQL connection**: Verify URL format and credentials
 - **File permissions**: Ensure `~/.qwencode/` is writable
+
+### Task/Audit Issues
+
+- **Audit disabled**: Check `audit_enabled` in config or set `AUDIT_ENABLED=true`
+- **No audit score shown**: Local LLM may not be available; check with `/queue`
+
+## Performance Tips
+
+1. **Use headless mode** for faster browser operation once logged in
+2. **Enable local auditing** for quality control (requires Ollama)
+3. **Monitor token usage** with `/tokens` to track consumption
+4. **Use PostgreSQL** for better performance with many sessions
 
 ## License
 

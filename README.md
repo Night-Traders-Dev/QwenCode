@@ -4,12 +4,13 @@ A powerful AI coding harness that leverages Qwen Coder models for interactive de
 
 ## Features
 
-- **Dual-Model Architecture**: Use cloud-based Qwen Coder models alongside a local Ollama instance (qwen3.5:4b)
+- **Triple-Model Architecture**: Use the cloud/browser Qwen model with a local audit model (`qwen3.5:4b`) and a fast helper model (`qwen3.5:0.8b`)
 - **Browser Mode**: Interact with Qwen's web interface directly, including tool execution
 - **Memory System**: Persistent conversation history using PostgreSQL or file-based storage
 - **Local LLM Integration**:
   - Text formatting and cleanup
   - Prompt/response auditing for quality assurance
+  - Fast response gating with the `qwen3.5:0.8b` helper model
   - Auxiliary tasks while main model works
   - Summarization and key point extraction
 - **Task Tracking & Timing**: Non-blocking timers, step-level timing breakdown, task queue management
@@ -33,6 +34,7 @@ A powerful AI coding harness that leverages Qwen Coder models for interactive de
    ```bash
    git clone <repository-url>
    cd QwenCode
+   git submodule update --init --recursive
    ```
 
 2. **Install dependencies**:
@@ -53,6 +55,7 @@ A powerful AI coding harness that leverages Qwen Coder models for interactive de
    ```bash
    # Install Ollama from https://ollama.ai
    ollama pull qwen3.5:4b
+   ollama pull qwen3.5:0.8b
    ```
 
 5. **Set up PostgreSQL** (optional, for advanced memory):
@@ -113,6 +116,11 @@ Configuration is stored in `~/.qwencode/config.json`. You can also use environme
 | `QWEN_BASE_URL` | Custom API base URL | https://dashscope-intl.aliyuncs.com/compatible-mode/v1 |
 | `QWEN_MODEL` | Default model name | qwen3-coder-plus |
 | `LOCAL_MODEL` | Local Ollama model | qwen3.5:4b |
+| `LOCAL_FAST_MODEL` | Fast local helper model | qwen3.5:0.8b |
+| `LOCAL_FAST_BACKEND` | Fast helper backend (`auto`, `ollama`, `megakernel`) | auto |
+| `LOCAL_FAST_ENABLED` | Enable fast local helper lane | true |
+| `MEGAKERNEL_MODEL` | Hugging Face model id for MegaKernel probing | Qwen/Qwen3.5-0.8B |
+| `MEGAKERNEL_PATH` | Local MegaKernel/Mirage checkout path | third_party/mirage |
 | `MEMORY_DB_URL` | PostgreSQL connection URL | (uses file-based) |
 | `LOCAL_ENABLED` | Enable local LLM integration | true |
 | `AUDIT_ENABLED` | Enable automatic response auditing | true |
@@ -134,12 +142,20 @@ The memory system provides persistent storage for:
 
 ## Local LLM & Auditing
 
-When Ollama is running with qwen3.5:4b, the system automatically:
+When Ollama is running with `qwen3.5:4b` and `qwen3.5:0.8b`, the system automatically:
 
 1. **Audits your prompts** before sending to the cloud model
-2. **Processes the response** through the local LLM
-3. **Scores accuracy and quality** on a 1-10 scale
-4. **Updates memory** with audit results for future reference
+2. **Warms both local models** while the cloud/browser model is working
+3. **Runs a fast gate** with `qwen3.5:0.8b` to skip unnecessary heavy audits
+4. **Escalates to `qwen3.5:4b`** only when the fast gate flags the answer
+5. **Updates memory** with audit results for future reference
+
+### MegaKernel Status
+
+The repo now vendors MegaKernel via the `third_party/mirage` submodule. The
+fast helper path probes that checkout, but the current `mpk` branch only
+registers Qwen3 builders, so `Qwen/Qwen3.5-0.8B` stays on the Ollama fast path
+until upstream exposes a Qwen3.5-compatible builder.
 
 ### Manual Local LLM Commands
 
@@ -291,7 +307,7 @@ src/
 ## Performance Tips
 
 1. **Use headless mode** for faster browser operation once logged in
-2. **Enable local auditing** for quality control (requires Ollama)
+2. **Keep `qwen3.5:0.8b` available locally** so the fast gate can clear easy answers quickly
 3. **Monitor token usage** with `/tokens` to track consumption
 4. **Use PostgreSQL** for better performance with many sessions
 

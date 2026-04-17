@@ -56,7 +56,9 @@ class LocalLLMClient:
     def chat(self, messages: List[Dict],
              temperature: float = 0.3,
              max_tokens: int = 2048,
-             stream: bool = False) -> Any:
+             stream: bool = False,
+             think: Optional[bool] = None,
+             response_format: Optional[Dict[str, Any]] = None) -> Any:
         """
         Send a chat request to the local LLM.
 
@@ -69,17 +71,29 @@ class LocalLLMClient:
         Returns:
             Response object or generator if streaming
         """
+        request_kwargs = {
+            "model": self.model,
+            "messages": messages,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+            "stream": stream,
+        }
+        if think is False:
+            request_kwargs["reasoning_effort"] = "none"
+        elif think is True:
+            request_kwargs["reasoning_effort"] = "high"
+        if response_format is not None:
+            request_kwargs["response_format"] = response_format
+
         return self.client.chat.completions.create(
-            model=self.model,
-            messages=messages,
-            temperature=temperature,
-            max_tokens=max_tokens,
-            stream=stream
+            **request_kwargs
         )
 
     def chat_complete(self, messages: List[Dict],
                       temperature: float = 0.3,
-                      max_tokens: int = 2048) -> str:
+                      max_tokens: int = 2048,
+                      think: Optional[bool] = None,
+                      response_format: Optional[Dict[str, Any]] = None) -> str:
         """
         Send a chat request and return the complete response text.
 
@@ -91,7 +105,14 @@ class LocalLLMClient:
         Returns:
             Response text as string
         """
-        response = self.chat(messages, temperature, max_tokens, stream=False)
+        response = self.chat(
+            messages,
+            temperature,
+            max_tokens,
+            stream=False,
+            think=think,
+            response_format=response_format,
+        )
         return response.choices[0].message.content
 
     def warmup(self, force: bool = False) -> bool:
@@ -113,6 +134,7 @@ class LocalLLMClient:
                     temperature=0.0,
                     max_tokens=4,
                     stream=False,
+                    think=False,
                 )
                 self._last_warmup = time.monotonic()
                 return bool(response.choices)
@@ -164,7 +186,7 @@ class LocalLLMClient:
             {"role": "user", "content": raw_text}
         ]
 
-        return self.chat_complete(messages, temperature=0.1)
+        return self.chat_complete(messages, temperature=0.1, think=False)
 
     def audit_prompt(self, prompt: str) -> Dict[str, Any]:
         """
@@ -192,7 +214,13 @@ Respond with a JSON object containing:
             {"role": "user", "content": prompt}
         ]
 
-        response = self.chat_complete(messages, temperature=0.1, max_tokens=400)
+        response = self.chat_complete(
+            messages,
+            temperature=0.1,
+            max_tokens=400,
+            think=False,
+            response_format={"type": "json_object"},
+        )
 
         try:
             # Try to extract JSON from response
@@ -241,7 +269,13 @@ Respond with a JSON object containing:
             {"role": "user", "content": f"{context}Response to audit:\n{response}"}
         ]
 
-        response_text = self.chat_complete(messages, temperature=0.1, max_tokens=600)
+        response_text = self.chat_complete(
+            messages,
+            temperature=0.1,
+            max_tokens=600,
+            think=False,
+            response_format={"type": "json_object"},
+        )
 
         try:
             start = response_text.find('{')
@@ -275,7 +309,7 @@ Respond with a JSON object containing:
             {"role": "user", "content": text}
         ]
 
-        return self.chat_complete(messages, temperature=0.1, max_tokens=1200)
+        return self.chat_complete(messages, temperature=0.1, max_tokens=1200, think=False)
 
     def extract_key_points(self, text: str) -> List[str]:
         """
@@ -292,7 +326,7 @@ Respond with a JSON object containing:
             {"role": "user", "content": text}
         ]
 
-        response = self.chat_complete(messages, temperature=0.1)
+        response = self.chat_complete(messages, temperature=0.1, think=False)
 
         # Parse bullet points
         points = []
@@ -321,7 +355,7 @@ Respond with a JSON object containing:
             {"role": "user", "content": text}
         ]
 
-        return self.chat_complete(messages, temperature=0.1)
+        return self.chat_complete(messages, temperature=0.1, think=False)
 
     def generate_follow_up_questions(self, topic: str, count: int = 3) -> List[str]:
         """
@@ -339,7 +373,7 @@ Respond with a JSON object containing:
             {"role": "user", "content": topic}
         ]
 
-        response = self.chat_complete(messages, temperature=0.5)
+        response = self.chat_complete(messages, temperature=0.5, think=False)
 
         questions = []
         for line in response.split('\n'):
@@ -385,7 +419,7 @@ Format the text to look clean and professional when rendered as Markdown."""},
             {"role": "user", "content": f"{context}Please format this text for professional display:\n\n{raw_text}"}
         ]
 
-        return self.chat_complete(messages, temperature=0.1)
+        return self.chat_complete(messages, temperature=0.1, think=False)
 
 
 # Global instance (lazy initialization)

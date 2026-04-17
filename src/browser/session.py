@@ -12,6 +12,7 @@ from config.prompt import build_prompt_session, get_input_async, handle_slash
 
 try:
     from memory.store import MemoryStore
+    from memory.fast_llm import get_fast_llm
     from memory.local_llm import get_local_llm
     from ui.task_tracker import (
         get_task_queue, get_token_tracker, get_thinking_ui,
@@ -21,6 +22,7 @@ try:
 except ImportError:
     MEMORY_AVAILABLE = False
     MemoryStore = None
+    get_fast_llm = None
     get_local_llm = None
     get_task_queue = None
     get_token_tracker = None
@@ -44,6 +46,8 @@ async def browser_session(cfg: dict, headless: bool = False):
 
     # Initialize memory store
     memory_store = None
+    fast_llm_client = None
+    fast_llm_status = None
     local_llm_client = None
     memory_status = None
     if MEMORY_AVAILABLE and MemoryStore:
@@ -55,18 +59,36 @@ async def browser_session(cfg: dict, headless: bool = False):
                 require_postgres=cfg.get("require_postgres", False),
             )
             memory_status = memory_store.get_status()
-            # Get or create session
-            memory_store.get_or_create_session(
-                cfg.get("session_id", "default"),
-                model_main=cfg.get("model"),
-                model_local=cfg.get("local_model")
-            )
             # Initialize local LLM if enabled
             if cfg.get("local_enabled", True) and get_local_llm:
                 local_llm_client = get_local_llm(cfg.get("local_model"))
                 if not local_llm_client.is_available():
                     console.print(f"[{C['dim']}]Local LLM not available, auditing disabled[/]")
                     local_llm_client = None
+            if cfg.get("local_fast_enabled", True) and get_fast_llm:
+                fast_llm_client = get_fast_llm(
+                    model=cfg.get("local_fast_model"),
+                    backend=cfg.get("local_fast_backend", "auto"),
+                    megakernel_model=cfg.get("megakernel_model"),
+                    megakernel_path=cfg.get("megakernel_path", "third_party/mirage"),
+                    audit_threshold=cfg.get("local_fast_audit_threshold", 7.5),
+                )
+                fast_llm_status = fast_llm_client.get_status()
+                if not fast_llm_status.get("available"):
+                    fast_llm_client = None
+
+            local_models = []
+            if local_llm_client:
+                local_models.append(cfg.get("local_model"))
+            if fast_llm_client and fast_llm_status:
+                local_models.append(
+                    f"fast:{cfg.get('local_fast_model')} ({fast_llm_status.get('resolved_backend')})"
+                )
+            memory_store.get_or_create_session(
+                cfg.get("session_id", "default"),
+                model_main=cfg.get("model"),
+                model_local=", ".join(local_models) if local_models else None,
+            )
         except Exception as e:
             console.print(f"[{C['warn']}]Memory store init failed: {e}[/]")
 
@@ -81,6 +103,13 @@ async def browser_session(cfg: dict, headless: bool = False):
                 console.print(f"[{C['warn']}]Memory backend:[/] file fallback ({reason})")
         if local_llm_client:
             console.print(f"[{C['ok']}]Local LLM:[/] {local_llm_client.model}")
+        if fast_llm_client and fast_llm_status:
+            backend = (fast_llm_status.get("resolved_backend") or "ollama").capitalize()
+            console.print(f"[{C['ok']}]Fast Local LLM:[/] {fast_llm_client.model} via {backend}")
+            if fast_llm_status.get("reason"):
+                console.print(f"[{C['dim']}]Fast path note:[/] {fast_llm_status['reason']}")
+        elif fast_llm_status and fast_llm_status.get("reason") and cfg.get("local_fast_backend", "auto") == "megakernel":
+            console.print(f"[{C['warn']}]Fast path note:[/] {fast_llm_status['reason']}")
         session = build_prompt_session()
 
         while True:
@@ -107,11 +136,13 @@ async def browser_session(cfg: dict, headless: bool = False):
             audit_details = None
             assistant_tokens = 0
             response_rendered = False
-            warmup_task = None
+            warmup_tasks = []
             use_local_formatter = bool(cfg.get("local_format_enabled", False))
 
             if local_llm_client:
-                warmup_task = asyncio.create_task(asyncio.to_thread(local_llm_client.warmup))
+                warmup_tasks.append(asyncio.create_task(asyncio.to_thread(local_llm_client.warmup)))
+            if fast_llm_client:
+                warmup_tasks.append(asyncio.create_task(asyncio.to_thread(fast_llm_client.warmup)))
 
             if memory_store:
                 try:
@@ -125,7 +156,7 @@ async def browser_session(cfg: dict, headless: bool = False):
                 except Exception as e:
                     console.print(f"[{C['warn']}]Could not persist user prompt: {e}[/]")
 
-            if MEMORY_AVAILABLE and Task and local_llm_client and cfg.get("audit_enabled", True):
+            if MEMORY_AVAILABLE and Task and cfg.get("audit_enabled", True) and (local_llm_client or fast_llm_client):
                 # Run with full audit pipeline
                 reset_trackers()
                 task = Task(id=task_id, prompt=user_input)
@@ -152,42 +183,63 @@ async def browser_session(cfg: dict, headless: bool = False):
 
                 async def audit_task(result):
                     nonlocal audit_details, assistant_tokens
+                    if warmup_tasks:
+                        await asyncio.gather(*warmup_tasks, return_exceptions=True)
+
+                    formatted_result = result
+                    local_tokens_used = 0
+
+                    if use_local_formatter and local_llm_client and local_llm_client.is_available():
+                        panel.update(stage="formatting", step="Formatting with local LLM")
+                        formatted_result = await asyncio.to_thread(
+                            local_llm_client.format_for_display,
+                            result,
+                            user_input,
+                        )
+                        if not (formatted_result or "").strip():
+                            formatted_result = result
+                        else:
+                            local_tokens_used += max(1, len(formatted_result) // 4)
+
+                    quick_audit = None
+                    if fast_llm_client and fast_llm_client.is_available():
+                        panel.update(stage="auditing", step=f"Fast audit with {fast_llm_client.model}")
+                        quick_audit = await asyncio.to_thread(
+                            fast_llm_client.quick_audit,
+                            formatted_result,
+                            user_input,
+                        )
+                        audit_details = quick_audit
+                        local_tokens_used += max(1, len(json.dumps(quick_audit)) // 4)
+                        if not fast_llm_client.should_escalate(quick_audit):
+                            tracker.add_local(local_tokens_used)
+                            assistant_tokens = tracker.total
+                            panel.update(tokens_local=tracker.local_tokens)
+                            task.result = formatted_result
+                            return quick_audit
+
                     if local_llm_client and local_llm_client.is_available():
-                        if warmup_task:
-                            try:
-                                await warmup_task
-                            except Exception:
-                                pass
-
-                        formatted_result = result
-                        if use_local_formatter:
-                            panel.update(stage="formatting", step="Formatting with local LLM")
-                            formatted_result = await asyncio.to_thread(
-                                local_llm_client.format_for_display,
-                                result,
-                                user_input,
-                            )
-                            if not (formatted_result or "").strip():
-                                formatted_result = result
-
-                        # Then audit the formatted result
                         panel.update(stage="auditing", step="Auditing response quality")
                         audit_result = await asyncio.to_thread(
                             local_llm_client.audit_response,
                             formatted_result,
                             user_input,
                         )
+                        if quick_audit:
+                            audit_result["fast_gate"] = quick_audit
                         audit_details = audit_result
-
-                        # Update token count
-                        tracker.add_local(len(formatted_result) // 4)
+                        local_tokens_used += max(1, len(json.dumps(audit_result)) // 4)
+                        tracker.add_local(local_tokens_used)
                         assistant_tokens = tracker.total
                         panel.update(tokens_local=tracker.local_tokens)
-
-                        # Return formatted result as the actual response
                         task.result = formatted_result
                         return audit_result
-                    return {"score": 5.0}
+
+                    tracker.add_local(local_tokens_used)
+                    assistant_tokens = tracker.total
+                    panel.update(tokens_local=tracker.local_tokens)
+                    task.result = formatted_result
+                    return quick_audit or {"score": 5.0}
 
                 await run_task_with_timing(task, main_task, audit_task, enable_audit=True)
 
@@ -203,6 +255,8 @@ async def browser_session(cfg: dict, headless: bool = False):
                             "task_id": task_id,
                             "main_model": "qwen-coder (web)",
                             "local_model": cfg.get("local_model"),
+                            "fast_local_model": cfg.get("local_fast_model") if fast_llm_client else None,
+                            "fast_local_backend": fast_llm_status.get("resolved_backend") if fast_llm_status else None,
                             "audit_score": task.audit_score,
                             "tool_calls": len(tool_history),
                             "raw_response_chars": len(raw_response),
@@ -230,7 +284,7 @@ async def browser_session(cfg: dict, headless: bool = False):
                             memory_store.upsert_knowledge(
                                 key=f"audit:{session_id}:{task_id}",
                                 content=json.dumps(audit_details, indent=2),
-                                source=cfg.get("local_model"),
+                                source=audit_details.get("model", cfg.get("local_model")),
                                 category="audit",
                                 session_id=session_id,
                                 metadata={
@@ -315,10 +369,17 @@ async def browser_session(cfg: dict, headless: bool = False):
 
             if memory_store:
                 try:
+                    local_models = []
+                    if local_llm_client:
+                        local_models.append(cfg.get("local_model"))
+                    if fast_llm_client and fast_llm_status:
+                        local_models.append(
+                            f"fast:{cfg.get('local_fast_model')} ({fast_llm_status.get('resolved_backend')})"
+                        )
                     memory_store.get_or_create_session(
                         session_id,
                         model_main=cfg.get("model"),
-                        model_local=cfg.get("local_model") if local_llm_client else None,
+                        model_local=", ".join(local_models) if local_models else None,
                     )
                 except Exception:
                     pass

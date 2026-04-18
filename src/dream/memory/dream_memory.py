@@ -7,6 +7,19 @@ Persists to JSON so sessions can be resumed.  The in-memory structure is:
   "topic": str,
   "subtopics": [str, ...],
   "knowledge_base": [str, ...],         # verified statements accumulated
+  "current_research": {
+    "query": str,
+    "focus_terms": [str, ...],
+    "sources": [{"title": str, "url": str, "domain": str, "snippet": str}, ...],
+    "candidate_statements": [str, ...],
+    "timestamp": float,
+  },
+  "research_history": [current_research, ...],
+  "reinforcement": {
+    "concept_mastery": {str: float, ...},
+    "source_rewards": {str: float, ...},
+    "history": [{"reward": float, "score_delta": float, ...}, ...],
+  },
   "flagged_statements": [str, ...],     # rejected by verifier
   "cycle_history": [
     {
@@ -59,6 +72,7 @@ class DreamMemory:
                     data = json.load(f)
                 if data.get("topic") == topic:
                     self._data = data
+                    self._normalize_shape()
                     logger.info(
                         "[memory] resumed: %d statements, %d cycles",
                         len(self._data.get("knowledge_base", [])),
@@ -72,6 +86,19 @@ class DreamMemory:
             "topic": topic,
             "subtopics": subtopics,
             "knowledge_base": [],
+            "current_research": {
+                "query": "",
+                "focus_terms": [],
+                "sources": [],
+                "candidate_statements": [],
+                "timestamp": 0.0,
+            },
+            "research_history": [],
+            "reinforcement": {
+                "concept_mastery": {},
+                "source_rewards": {},
+                "history": [],
+            },
             "flagged_statements": [],
             "cycle_history": [],
             "weak_areas": [],
@@ -83,6 +110,38 @@ class DreamMemory:
         else:
             logger.info("[memory] initialised fresh for topic: %s", topic)
         return False
+
+    def _normalize_shape(self) -> None:
+        self._data.setdefault("knowledge_base", [])
+        self._data.setdefault("flagged_statements", [])
+        self._data.setdefault("cycle_history", [])
+        self._data.setdefault("weak_areas", [])
+        self._data.setdefault("topic_retry_count", 0)
+        self._data.setdefault("session_best_score", 0.0)
+        self._data.setdefault(
+            "current_research",
+            {
+                "query": "",
+                "focus_terms": [],
+                "sources": [],
+                "candidate_statements": [],
+                "timestamp": 0.0,
+            },
+        )
+        self._data.setdefault("research_history", [])
+        self._data.setdefault(
+            "reinforcement",
+            {
+                "concept_mastery": {},
+                "source_rewards": {},
+                "history": [],
+            },
+        )
+        reinforcement = self._data.get("reinforcement", {})
+        if isinstance(reinforcement, dict):
+            reinforcement.setdefault("concept_mastery", {})
+            reinforcement.setdefault("source_rewards", {})
+            reinforcement.setdefault("history", [])
 
     def save(self) -> None:
         try:
@@ -113,6 +172,204 @@ class DreamMemory:
     @property
     def knowledge_base(self) -> list[str]:
         return self._data.get("knowledge_base", [])
+
+    # ── Internet research ─────────────────────────────────────────────────
+
+    def set_research(
+        self,
+        query: str,
+        focus_terms: list[str],
+        sources: list[dict[str, Any]],
+        candidate_statements: list[str],
+    ) -> None:
+        payload = {
+            "query": query,
+            "focus_terms": [str(item).strip() for item in focus_terms if str(item).strip()],
+            "sources": [source for source in sources if isinstance(source, dict) and source.get("url")],
+            "candidate_statements": [str(item).strip() for item in candidate_statements if str(item).strip()],
+            "timestamp": time.time(),
+        }
+        self._data["current_research"] = payload
+        history = self._data.setdefault("research_history", [])
+        history.append(payload)
+        if len(history) > 12:
+            del history[:-12]
+
+    @property
+    def current_research(self) -> dict[str, Any]:
+        return self._data.get("current_research", {})
+
+    @property
+    def research_query(self) -> str:
+        return str(self.current_research.get("query", ""))
+
+    @property
+    def research_sources(self) -> list[dict[str, Any]]:
+        return [
+            source
+            for source in self.current_research.get("sources", [])
+            if isinstance(source, dict) and source.get("url")
+        ]
+
+    @property
+    def research_candidate_statements(self) -> list[str]:
+        return [
+            str(item).strip()
+            for item in self.current_research.get("candidate_statements", [])
+            if str(item).strip()
+        ]
+
+    @property
+    def research_domains(self) -> list[str]:
+        seen: set[str] = set()
+        domains: list[str] = []
+        for source in self.research_sources:
+            domain = str(source.get("domain", "")).strip()
+            if domain and domain not in seen:
+                seen.add(domain)
+                domains.append(domain)
+        return domains
+
+    @property
+    def research_timestamp(self) -> float:
+        try:
+            return float(self.current_research.get("timestamp", 0.0) or 0.0)
+        except (TypeError, ValueError):
+            return 0.0
+
+    def evidence_block(self, max_chars: int = 2400) -> str:
+        blocks: list[str] = []
+        total = 0
+        for idx, source in enumerate(self.research_sources, start=1):
+            block = (
+                f"[{idx}] {source.get('title', 'Untitled source')} ({source.get('domain', 'unknown')})\n"
+                f"URL: {source.get('url', '')}\n"
+                f"Summary: {source.get('snippet', '')}"
+            )
+            if total and total + len(block) + 2 > max_chars:
+                break
+            blocks.append(block)
+            total += len(block) + 2
+        return "\n\n".join(blocks)
+
+    # ── Reinforcement state ───────────────────────────────────────────────
+
+    @property
+    def reinforcement(self) -> dict[str, Any]:
+        return self._data.get("reinforcement", {})
+
+    @property
+    def concept_mastery(self) -> dict[str, float]:
+        mastery = self.reinforcement.get("concept_mastery", {})
+        return {
+            str(key): float(value)
+            for key, value in mastery.items()
+            if str(key).strip()
+        }
+
+    @property
+    def source_rewards(self) -> dict[str, float]:
+        rewards = self.reinforcement.get("source_rewards", {})
+        return {
+            str(key): float(value)
+            for key, value in rewards.items()
+            if str(key).strip()
+        }
+
+    def reinforcement_focus(self, limit: int = 3) -> list[str]:
+        ordered = sorted(self.concept_mastery.items(), key=lambda item: item[1])
+        focus: list[str] = []
+        for name, _score in ordered:
+            if name not in focus:
+                focus.append(name)
+            if len(focus) >= limit:
+                break
+        for item in self.weak_areas:
+            cleaned = str(item).strip()
+            if cleaned and cleaned not in focus:
+                focus.append(cleaned)
+            if len(focus) >= limit:
+                break
+        return focus[:limit]
+
+    def reinforce_cycle(
+        self,
+        score: float,
+        passed: bool,
+        concept_gaps: list[str],
+        weak_areas: list[str],
+        n_statements_added: int,
+        sources: list[dict[str, Any]] | None = None,
+        focus_terms: list[str] | None = None,
+    ) -> None:
+        reinforcement = self._data.setdefault(
+            "reinforcement",
+            {
+                "concept_mastery": {},
+                "source_rewards": {},
+                "history": [],
+            },
+        )
+        concept_mastery = reinforcement.setdefault("concept_mastery", {})
+        source_rewards = reinforcement.setdefault("source_rewards", {})
+        history = reinforcement.setdefault("history", [])
+
+        previous_score = 0.0
+        if len(self.cycle_history) >= 2:
+            previous_score = float(self.cycle_history[-2].get("score", 0.0) or 0.0)
+        score_delta = score - previous_score
+        base_reward = max(
+            -1.0,
+            min(
+                1.0,
+                (score - 0.5) * 1.2
+                + score_delta * 0.8
+                + min(n_statements_added, 6) * 0.03
+                + (0.15 if passed else -0.05),
+            ),
+        )
+
+        active_terms = [str(item).strip() for item in weak_areas if str(item).strip()]
+        if not active_terms:
+            active_terms = [str(item).strip() for item in (focus_terms or []) if str(item).strip()]
+
+        for area in active_terms:
+            cleaned = str(area).strip()
+            if not cleaned:
+                continue
+            prior = float(concept_mastery.get(cleaned, 0.0) or 0.0)
+            delta = 0.18 if passed else (-0.12 if score_delta < 0 else -0.04)
+            concept_mastery[cleaned] = round(max(-2.0, min(2.0, prior + delta)), 4)
+
+        for gap in concept_gaps:
+            cleaned = str(gap).strip()
+            if not cleaned:
+                continue
+            prior = float(concept_mastery.get(cleaned, 0.0) or 0.0)
+            concept_mastery[cleaned] = round(max(-2.0, min(2.0, prior - 0.3)), 4)
+
+        for source in sources or []:
+            if not isinstance(source, dict):
+                continue
+            domain = str(source.get("domain", "")).strip()
+            if not domain:
+                continue
+            prior = float(source_rewards.get(domain, 0.0) or 0.0)
+            source_rewards[domain] = round(max(-2.0, min(2.0, prior + base_reward * 0.25)), 4)
+
+        history.append(
+            {
+                "timestamp": time.time(),
+                "reward": round(base_reward, 4),
+                "score": round(score, 4),
+                "score_delta": round(score_delta, 4),
+                "passed": bool(passed),
+                "weak_areas": [str(item).strip() for item in weak_areas if str(item).strip()],
+                "concept_gaps": [str(item).strip() for item in concept_gaps if str(item).strip()],
+            }
+        )
+        if len(history) > 24:
+            del history[:-24]
 
     # ── Curriculum state ───────────────────────────────────────────────────
 
@@ -195,6 +452,10 @@ class DreamMemory:
             "total_cycles": len(self.cycle_history),
             "knowledge_statements": len(self.knowledge_base),
             "flagged_statements": len(self._data.get("flagged_statements", [])),
+            "research_sources": len(self.research_sources),
+            "research_domains": self.research_domains[:4],
+            "research_query": self.research_query,
+            "reinforcement_focus": self.reinforcement_focus(3),
             "best_score": self.session_best_score,
             "recent_scores": self.recent_scores(5),
             "weak_areas": self.weak_areas,

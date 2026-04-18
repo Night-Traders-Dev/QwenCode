@@ -32,14 +32,17 @@ class SmallAgent(BaseAgent):
 
     # ── Gather phase ───────────────────────────────────────────────────────
 
-    async def gather(self, topic: str, subtopics: list[str]) -> list[str]:
+    async def gather(self, topic: str, subtopics: list[str], evidence: str = "") -> list[str]:
         """
         Small model contributes concise definitional statements.
         Kept short due to limited context window.
         """
         subtopic_str = ", ".join(subtopics[:3]) if subtopics else topic
+        evidence_block = f"\nReliable source notes:\n{evidence}\n" if evidence else "\nReliable source notes: none provided.\n"
         prompt = f"""Topic: {topic}. Focus: {subtopic_str}.
+{evidence_block}
 Write 3 short, factual, one-sentence statements.
+Prefer statements directly supported by the reliable source notes when available.
 Respond ONLY with a JSON array of strings."""
 
         try:
@@ -55,6 +58,7 @@ Respond ONLY with a JSON array of strings."""
         self,
         statements: list[str],
         topic: str,
+        evidence: str = "",
     ) -> list[dict[str, Any]]:
         """
         Score each statement for factual legitimacy.
@@ -69,11 +73,14 @@ Respond ONLY with a JSON array of strings."""
 
         for idx in range(0, len(statements), chunk_size):
             chunk = statements[idx: idx + chunk_size]
+            evidence_block = f"\nReliable source notes:\n{evidence}\n" if evidence else "\nReliable source notes: none provided.\n"
             prompt = f"""Topic context: {topic}
+{evidence_block}
 Verify each statement for factual accuracy.
 Respond ONLY with a JSON object in this exact shape:
 {{"results": [{{"id": 1, "score": 1.0, "flag": false}}]}}
 Return one result for each statement in the same order.
+Use the reliable source notes as primary evidence when they are available.
 
 Statements:
 {chr(10).join(f"{pos + 1}. {stmt}" for pos, stmt in enumerate(chunk))}
@@ -102,20 +109,23 @@ Statements:
 
                 if len(items) < len(chunk):
                     for stmt in chunk[len(items):]:
-                        results.append(await self._verify_one(stmt, topic))
+                        results.append(await self._verify_one(stmt, topic, evidence))
             except Exception as exc:
                 logger.warning("[small] batch verify failed for %d statements: %s", len(chunk), exc)
                 for stmt in chunk:
-                    results.append(await self._verify_one(stmt, topic))
+                    results.append(await self._verify_one(stmt, topic, evidence))
 
         await self._fill_reason_gaps(results, topic)
         return results
 
-    async def _verify_one(self, stmt: str, topic: str) -> dict[str, Any]:
+    async def _verify_one(self, stmt: str, topic: str, evidence: str = "") -> dict[str, Any]:
+        evidence_block = f"\nReliable source notes:\n{evidence}\n" if evidence else "\nReliable source notes: none provided.\n"
         prompt = f"""Topic context: {topic}
+{evidence_block}
 Statement to verify: "{stmt}"
 
 Is this statement factually accurate?
+Use the reliable source notes as primary evidence when they are available.
 Respond ONLY with a JSON object:
 {{"score": <float 0.0-1.0>, "reason": "<one sentence>", "flag": <true if score < 0.5>}}"""
 

@@ -186,11 +186,36 @@ def tool_inspect_dream_memory(path: str = "dream_memory.json") -> str:
         return f"[error] {e}"
 
     recent = data.get("cycle_history", [])[-5:]
+    current_research = data.get("current_research", {}) if isinstance(data.get("current_research", {}), dict) else {}
+    research_sources = current_research.get("sources", []) if isinstance(current_research.get("sources", []), list) else []
+    reinforcement = data.get("reinforcement", {}) if isinstance(data.get("reinforcement", {}), dict) else {}
+    concept_mastery = reinforcement.get("concept_mastery", {}) if isinstance(reinforcement.get("concept_mastery", {}), dict) else {}
+    reinforcement_focus = [
+        key
+        for key, _value in sorted(
+            (
+                (str(key).strip(), float(value))
+                for key, value in concept_mastery.items()
+                if str(key).strip()
+            ),
+            key=lambda item: item[1],
+        )[:5]
+    ]
+    research_domains = []
+    for source in research_sources:
+        if isinstance(source, dict):
+            domain = str(source.get("domain", "")).strip()
+            if domain and domain not in research_domains:
+                research_domains.append(domain)
     lines = [
         f"Topic: {data.get('topic', 'unknown')}",
         f"Subtopics: {', '.join(data.get('subtopics', [])[:6]) or '(none)'}",
         f"Knowledge statements: {len(data.get('knowledge_base', []))}",
         f"Flagged statements: {len(data.get('flagged_statements', []))}",
+        f"Research query: {current_research.get('query', '(none)') or '(none)'}",
+        f"Research sources: {len(research_sources)}",
+        f"Research domains: {', '.join(research_domains[:5]) or '(none)'}",
+        f"Reinforcement focus: {', '.join(reinforcement_focus) or '(warming up)'}",
         f"Best score: {float(data.get('session_best_score', 0.0) or 0.0) * 100:.1f}%",
         f"Weak areas: {', '.join(data.get('weak_areas', [])[:5]) or '(none)'}",
         "",

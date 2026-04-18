@@ -20,6 +20,8 @@ QwenCode is a terminal-first Qwen harness with a browser runner, a local helper 
 - **Professional terminal rendering** with responsive status panels and structured answer views
 - **Semantic response rendering** for weather reports, Dream summaries, knowledge hits, and improved markdown fallback
 - **Dream loop** with live progress UI, session summaries, and PostgreSQL sync
+- **Default Dream research lane** that pulls fresh evidence from trusted internet sources and feeds it into Gather, Verify, Examine, and Adapt
+- **Reinforcement-style curriculum memory** that tracks which concepts and source domains are helping or hurting progress
 - **Dream cloud fallback** to the local 4B lane when the remote orchestrator is unavailable or misconfigured
 - **Expanded toolset** for file reads, chunked file reads, shell, git, knowledge search, and Dream inspection
 - **Structured tool-result views** so diagnostics and memory hits land as UI instead of raw log text
@@ -246,6 +248,7 @@ Dream now writes:
 - `dream_summary`
 - `dream_cycle`
 - `dream_knowledge`
+- `dream_source`
 
 Rows are keyed with the Dream session id so separate Dream runs on the same topic do not overwrite one another.
 
@@ -257,6 +260,20 @@ Dream is the multi-agent training loop:
 2. Verify
 3. Examine
 4. Adapt
+
+By default, each Dream cycle also runs a reliable-source internet retrieval pass:
+
+- uses Wikipedia plus trusted domains such as `.gov`, `.edu`, `.mil`, `.int`, standards bodies, docs sites, and research organizations
+- uses a search engine only for discovery, then fetches and stores source content directly from trusted domains
+- turns retrieved excerpts into candidate facts
+- uses the retrieved evidence to ground question generation, verification, and gap analysis
+
+Dream also keeps a lightweight reinforcement layer:
+
+- concepts tied to repeated mistakes are pushed down in mastery
+- concepts tied to improving scores are rewarded
+- source domains that correlate with better cycles are rewarded
+- future research queries are biased toward the lowest-mastery concepts first
 
 ### Run Dream
 
@@ -276,6 +293,18 @@ python src/run_dream.py "basic arithmetic" --plain
 
 ```bash
 python src/run_dream.py "basic arithmetic" --resume --memory dream_basic_arithmetic.json
+```
+
+### Run Dream without internet retrieval
+
+```bash
+python src/run_dream.py "basic arithmetic" --no-research
+```
+
+### Limit how many trusted sources Dream fetches per cycle
+
+```bash
+python src/run_dream.py "basic arithmetic" --research-sources 2
 ```
 
 ### Override Dream session id for PostgreSQL sync
@@ -303,7 +332,9 @@ Recent Dream improvements include:
 - batched medium-model test taking
 - structured-response enforcement for the 4B and 0.8B lanes
 - staged verification so the 0.8B spends less time generating explanations for obviously good statements
-- PostgreSQL persistence for Dream summaries and knowledge
+- PostgreSQL persistence for Dream summaries, knowledge, and fetched source evidence
+- default reliable-source retrieval with cached refresh windows
+- reinforcement-style concept and source scoring to steer later cycles
 
 ## Configuration
 

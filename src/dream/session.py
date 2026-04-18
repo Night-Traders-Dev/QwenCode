@@ -241,6 +241,7 @@ class DreamSession:
         # ── Phase 1: Gather ────────────────────────────────────────────────
         self._ui_set_phase("Gather", "running", "Collecting candidate statements")
         raw_statements = await phase_gather(topic, memory, cloud, medium, small, cfg)
+        self._persist_research_sources()
         self._ui_complete_phase("Gather", f"Collected {len(raw_statements)} candidate statements.")
 
         # ── Phase 2: Verify ────────────────────────────────────────────────
@@ -273,6 +274,15 @@ class DreamSession:
         # ── Phase 4: Adapt ─────────────────────────────────────────────────
         self._ui_set_phase("Adapt", "running", "Updating curriculum and weak areas")
         await phase_adapt(topic, cycle, grade_report, memory, cloud, cfg)
+        memory.reinforce_cycle(
+            score=grade_report.get("score", 0.0),
+            passed=grade_report.get("passed", False),
+            concept_gaps=grade_report.get("concept_gaps", []),
+            weak_areas=memory.weak_areas,
+            n_statements_added=len(_verified),
+            sources=memory.research_sources,
+            focus_terms=self.memory.current_research.get("focus_terms", []),
+        )
         self._persist_cycle_report(cycle, grade_report)
         adapt_detail = (
             f"Passed cycle. Retry count {memory.topic_retry_count}/{cfg.max_topic_retries}."
@@ -388,6 +398,12 @@ class DreamSession:
             "topic": self.topic,
             "summary": summary,
             "subtopics": self.memory.subtopics,
+            "research": self.memory.current_research,
+            "reinforcement": {
+                "focus": self.memory.reinforcement_focus(3),
+                "concept_mastery": self.memory.concept_mastery,
+                "source_rewards": self.memory.source_rewards,
+            },
             "memory_path": self.cfg.memory_path,
             "log_path": self.cfg.log_path,
         }
@@ -418,6 +434,41 @@ class DreamSession:
                 metadata={"topic": self.topic, "kind": "verified_statement"},
             )
 
+    def _persist_research_sources(self) -> None:
+        if self.memory_store is None or not self.memory.research_sources:
+            return
+
+        session_id = self.cfg.session_id
+        topic_digest = self._topic_digest()
+        query = self.memory.research_query
+        for source in self.memory.research_sources:
+            url = str(source.get("url", "")).strip()
+            if not url:
+                continue
+            source_digest = hashlib.sha1(url.encode("utf-8")).hexdigest()[:16]
+            payload = {
+                "topic": self.topic,
+                "query": query,
+                "title": source.get("title", ""),
+                "url": url,
+                "domain": source.get("domain", ""),
+                "snippet": source.get("snippet", ""),
+            }
+            self.memory_store.upsert_knowledge(
+                key=f"dream:source:{session_id}:{topic_digest}:{source_digest}",
+                content=json.dumps(payload, indent=2),
+                source=str(source.get("domain", "dream_research") or "dream_research"),
+                category="dream_source",
+                session_id=session_id,
+                metadata={
+                    "topic": self.topic,
+                    "kind": "research_source",
+                    "query": query,
+                    "url": url,
+                    "domain": source.get("domain", ""),
+                },
+            )
+
     def _persist_cycle_report(self, cycle: int, grade_report: dict) -> None:
         if self.memory_store is None:
             return
@@ -431,6 +482,9 @@ class DreamSession:
             "concept_gaps": grade_report.get("concept_gaps", []),
             "weak_areas": self.memory.weak_areas,
             "knowledge_size": len(self.memory.knowledge_base),
+            "research_query": self.memory.research_query,
+            "research_domains": self.memory.research_domains,
+            "reinforcement_focus": self.memory.reinforcement_focus(3),
         }
         self.memory_store.upsert_knowledge(
             key=f"dream:cycle:{session_id}:{self._topic_digest()}:{cycle:06d}",

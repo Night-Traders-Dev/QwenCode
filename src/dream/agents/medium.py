@@ -33,17 +33,20 @@ class MediumAgent(BaseAgent):
 
     # ── Gather phase ───────────────────────────────────────────────────────
 
-    async def gather(self, topic: str, subtopics: list[str]) -> list[str]:
+    async def gather(self, topic: str, subtopics: list[str], evidence: str = "") -> list[str]:
         """
         Produce focused factual statements from a learner's perspective.
         Tends to surface concrete examples and common misconceptions.
         """
         subtopic_str = ", ".join(subtopics) if subtopics else topic
+        evidence_block = f"\nReliable source notes:\n{evidence}\n" if evidence else "\nReliable source notes: none provided.\n"
         prompt = f"""You are learning about: {topic}
 Focus on: {subtopic_str}
+{evidence_block}
 
 Write 5 factual, specific statements about this topic.
 Include at least one concrete example and one common misconception correction.
+Prefer facts supported by the reliable source notes when they are available.
 
 Respond ONLY with a JSON array of strings.
 Example: ["Fact one.", "Fact two.", ...]"""

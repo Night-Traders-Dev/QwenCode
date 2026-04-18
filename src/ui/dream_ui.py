@@ -32,6 +32,9 @@ class DreamLiveUI:
         self.best_score = 0.0
         self.knowledge_size = 0
         self.flagged_count = 0
+        self.research_source_count = 0
+        self.research_domains: list[str] = []
+        self.reinforcement_focus: list[str] = []
         self.last_score: Optional[float] = None
         self.memory_backend = cfg.memory_backend
         self.session_id = cfg.session_id
@@ -119,6 +122,9 @@ class DreamLiveUI:
         summary = memory.summary()
         self.knowledge_size = summary["knowledge_statements"]
         self.flagged_count = summary["flagged_statements"]
+        self.research_source_count = summary.get("research_sources", 0)
+        self.research_domains = summary.get("research_domains", [])
+        self.reinforcement_focus = summary.get("reinforcement_focus", [])
         self.best_score = summary["best_score"]
         self.recent_scores = summary["recent_scores"]
         self.weak_areas = summary["weak_areas"]
@@ -137,6 +143,9 @@ class DreamLiveUI:
         self.phase_detail = "Dream session finished"
         self.knowledge_size = summary["knowledge_statements"]
         self.flagged_count = summary["flagged_statements"]
+        self.research_source_count = summary.get("research_sources", 0)
+        self.research_domains = summary.get("research_domains", [])
+        self.reinforcement_focus = summary.get("reinforcement_focus", [])
         self.best_score = summary["best_score"]
         self.recent_scores = summary["recent_scores"]
         self.weak_areas = summary["weak_areas"]
@@ -202,6 +211,19 @@ class DreamLiveUI:
                 ),
                 Text(
                     "Recent scores: " + (", ".join(f"{score * 100:.0f}%" for score in self.recent_scores[-5:]) or "none"),
+                    style=C["dim"],
+                ),
+                Text(
+                    "Sources: "
+                    + (
+                        f"{self.research_source_count} from " + ", ".join(self.research_domains[:3])
+                        if self.research_source_count
+                        else "none fetched yet"
+                    ),
+                    style=C["dim"],
+                ),
+                Text(
+                    "Reinforcement: " + (", ".join(self.reinforcement_focus) or "warming up"),
                     style=C["dim"],
                 ),
             ),

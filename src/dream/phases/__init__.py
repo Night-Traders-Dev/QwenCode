@@ -15,6 +15,7 @@ from dream.agents.medium import MediumAgent
 from dream.agents.small import SmallAgent
 from dream.config import DreamConfig
 from dream.memory.dream_memory import DreamMemory
+from dream.research import DreamResearcher, ResearchPacket
 
 logger = logging.getLogger("dream.phases")
 
@@ -22,6 +23,55 @@ logger = logging.getLogger("dream.phases")
 def _is_local_endpoint(base_url: str) -> bool:
     lowered = (base_url or "").lower()
     return "localhost:11434" in lowered or "127.0.0.1:11434" in lowered
+
+
+async def _research_packet(
+    topic: str,
+    memory: DreamMemory,
+    cfg: DreamConfig,
+) -> ResearchPacket | None:
+    if not cfg.research_enabled:
+        return None
+
+    researcher = DreamResearcher(cfg)
+    query, _focus = researcher.build_query(
+        topic,
+        memory.subtopics,
+        memory.weak_areas,
+        memory.reinforcement_focus(3),
+    )
+    research_age = max(0.0, time.time() - memory.research_timestamp)
+    if (
+        memory.research_query == query
+        and memory.research_sources
+        and research_age <= cfg.research_refresh_seconds
+    ):
+        logger.info(
+            "[research] reusing cached sources for query=%r | sources=%d | age=%.1fs",
+            query,
+            len(memory.research_sources),
+            research_age,
+        )
+        return ResearchPacket.from_memory_payload(memory.current_research)
+
+    try:
+        packet = await researcher.collect(
+            topic,
+            memory.subtopics,
+            memory.weak_areas,
+            memory.reinforcement_focus(3),
+        )
+    except Exception as exc:
+        logger.warning("[research] collection failed for %r: %s", query, exc)
+        return None
+
+    memory.set_research(
+        query=packet.query,
+        focus_terms=packet.focus_terms,
+        sources=[source.as_dict() for source in packet.sources],
+        candidate_statements=packet.candidate_statements,
+    )
+    return packet
 
 
 # ── Phase 1: Gather ────────────────────────────────────────────────────────
@@ -42,23 +92,34 @@ async def phase_gather(
     """
     logger.info("[gather] starting — topic=%s, subtopics=%s", topic, memory.subtopics[:3])
     t0 = time.perf_counter()
+    packet = await _research_packet(topic, memory, cfg)
+    evidence = packet.evidence_block(cfg.research_max_context_chars) if packet else ""
+    sourced_statements = packet.candidate_statements if packet else []
+    if packet:
+        logger.info(
+            "[gather] reliable-source research | query=%r | sources=%d | sourced_statements=%d | domains=%s",
+            packet.query,
+            len(packet.sources),
+            len(sourced_statements),
+            ", ".join(source.domain for source in packet.sources[:4]) or "none",
+        )
 
     # Only parallelize when the cloud lane is truly remote. If it has fallen back
     # to a local endpoint, keep the local 4B calls serialized to avoid VRAM spikes.
     if _is_local_endpoint(cfg.cloud.base_url):
-        cloud_stmts = await cloud.gather(topic, memory.subtopics)
+        cloud_stmts = await cloud.gather(topic, memory.subtopics, evidence=evidence)
         await asyncio.sleep(cfg.local_inference_cooldown)
-        medium_stmts = await medium.gather(topic, memory.subtopics)
+        medium_stmts = await medium.gather(topic, memory.subtopics, evidence=evidence)
     else:
-        cloud_task = asyncio.create_task(cloud.gather(topic, memory.subtopics))
-        medium_task = asyncio.create_task(medium.gather(topic, memory.subtopics))
+        cloud_task = asyncio.create_task(cloud.gather(topic, memory.subtopics, evidence=evidence))
+        medium_task = asyncio.create_task(medium.gather(topic, memory.subtopics, evidence=evidence))
         cloud_stmts, medium_stmts = await asyncio.gather(cloud_task, medium_task)
 
     # Small runs after medium to avoid OOM spike on shared 8GB
     await asyncio.sleep(cfg.local_inference_cooldown)
-    small_stmts = await small.gather(topic, memory.subtopics)
+    small_stmts = await small.gather(topic, memory.subtopics, evidence=evidence)
 
-    combined = cloud_stmts + medium_stmts + small_stmts
+    combined = sourced_statements + cloud_stmts + medium_stmts + small_stmts
 
     logger.info(
         "[gather] complete in %.1fs | cloud=%d medium=%d small=%d total=%d",
@@ -94,7 +155,8 @@ async def phase_verify(
             seen.add(norm)
             unique.append(s.strip())
 
-    results = await small.verify_statements(unique, topic)
+    evidence = memory.evidence_block(cfg.research_max_context_chars) if cfg.research_enabled else ""
+    results = await small.verify_statements(unique, topic, evidence=evidence)
 
     verified: list[str] = []
     flagged: list[str] = []
@@ -146,6 +208,7 @@ async def phase_examine(
         "[examine] cycle=%d | kb_size=%d | weak_areas=%s",
         cycle, len(kb), weak,
     )
+    evidence = memory.evidence_block(cfg.research_max_context_chars) if cfg.research_enabled else ""
 
     # 3a — Cloud creates test
     logger.info("[examine] cloud creating test...")
@@ -155,6 +218,7 @@ async def phase_examine(
         knowledge_base=kb,
         n_questions=cfg.questions_per_test,
         weak_areas=weak,
+        evidence=evidence,
     )
 
     questions: list[dict] = test_data.get("questions", [])
@@ -225,6 +289,7 @@ async def phase_adapt(
             memory.topic_retry_count, cfg.max_topic_retries,
         )
     else:
-        weak_areas = await cloud.analyze_gaps(topic, grade_report, history)
+        evidence = memory.evidence_block(cfg.research_max_context_chars) if cfg.research_enabled else ""
+        weak_areas = await cloud.analyze_gaps(topic, grade_report, history, evidence=evidence)
         memory.weak_areas = weak_areas
         logger.info("[adapt] new weak_areas: %s", weak_areas)

@@ -44,6 +44,11 @@ def build_config(args: argparse.Namespace) -> DreamConfig:
     if args.cloud_key:
         cfg.cloud.api_key = args.cloud_key
 
+    if args.no_research:
+        cfg.research_enabled = False
+    if args.research_sources is not None:
+        cfg.research_max_sources = max(1, args.research_sources)
+
     return cfg
 
 
@@ -67,6 +72,8 @@ def main() -> None:
     # Cloud endpoint (if using a non-local Ollama or OpenAI-compat endpoint)
     parser.add_argument("--cloud-url", type=str, default=None)
     parser.add_argument("--cloud-key", type=str, default=None)
+    parser.add_argument("--no-research", action="store_true", help="Disable default internet retrieval during Dream")
+    parser.add_argument("--research-sources", type=int, default=None, help="Maximum reliable sources to fetch per Dream cycle")
 
     args = parser.parse_args()
     cfg = build_config(args)

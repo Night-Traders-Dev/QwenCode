@@ -33,17 +33,20 @@ class CloudAgent(BaseAgent):
 
     # ── Gather phase ───────────────────────────────────────────────────────
 
-    async def gather(self, topic: str, subtopics: list[str]) -> list[str]:
+    async def gather(self, topic: str, subtopics: list[str], evidence: str = "") -> list[str]:
         """
         Produce a set of factual knowledge statements about `topic`.
         Returns a list of statement strings.
         """
         subtopic_str = ", ".join(subtopics) if subtopics else "general overview"
+        evidence_block = f"\nReliable source notes:\n{evidence}\n" if evidence else "\nReliable source notes: none provided.\n"
         prompt = f"""Topic: {topic}
 Focus areas: {subtopic_str}
+{evidence_block}
 
 Generate 5 precise, factual knowledge statements about this topic.
 Each statement should be self-contained and verifiable.
+Prefer statements that are directly supported by the reliable source notes when available.
 
 Respond ONLY with a JSON array of strings, no other text.
 Example: ["Statement one.", "Statement two.", ...]"""
@@ -83,6 +86,7 @@ Example: ["Subtopic 1", "Subtopic 2", ...]"""
         knowledge_base: list[str],
         n_questions: int = 10,
         weak_areas: list[str] | None = None,
+        evidence: str = "",
     ) -> dict[str, Any]:
         """
         Generate a test with `n_questions` multiple-choice questions.
@@ -97,6 +101,7 @@ Example: ["Subtopic 1", "Subtopic 2", ...]"""
         kb_summary = "\n".join(f"- {s}" for s in knowledge_base[:20])
         weak_str = ", ".join(weak_areas) if weak_areas else "none identified"
         subtopic_str = ", ".join(subtopics)
+        evidence_block = f"\nReliable source notes:\n{evidence}\n" if evidence else "\nReliable source notes: none provided.\n"
 
         prompt = f"""Create a {n_questions}-question multiple-choice test about: {topic}
 Subtopics covered: {subtopic_str}
@@ -104,9 +109,11 @@ Prioritise weak areas: {weak_str}
 
 Reference knowledge:
 {kb_summary}
+{evidence_block}
 
 Each question must have exactly 4 options labelled A, B, C, D.
 One option is the definitively correct answer.
+Ground questions in the retrieved source notes when they are available.
 
 Respond ONLY with a JSON object in this exact shape:
 {{
@@ -137,14 +144,17 @@ Respond ONLY with a JSON object in this exact shape:
         topic: str,
         grade_report: dict[str, Any],
         history: list[dict],
+        evidence: str = "",
     ) -> list[str]:
         """
         Given a grade report from the 0.8B grader, identify which subtopics
         need the most attention next cycle.
         """
+        evidence_block = f"\nReliable source notes:\n{evidence}\n" if evidence else ""
         prompt = f"""Topic: {topic}
 Latest grade report: {json.dumps(grade_report)}
 Score history (last {len(history)} cycles): {json.dumps(history)}
+{evidence_block}
 
 Identify up to 3 subtopics or concept areas that most need reinforcement.
 Base your answer on low-scoring questions and persistent weak areas.

@@ -81,6 +81,15 @@ class DreamConfig:
     memory_db_url: Optional[str] = field(default_factory=lambda: load_config().get("memory_db_url") or None)
     require_postgres: bool = field(default_factory=lambda: bool(load_config().get("require_postgres", False)))
 
+    # ── Internet research ──────────────────────────────────────────────────
+    research_enabled: bool = True
+    research_max_sources: int = 4
+    research_statement_limit: int = 8
+    research_chars_per_source: int = 700
+    research_max_context_chars: int = 2400
+    research_timeout_seconds: float = 15.0
+    research_refresh_seconds: float = 900.0
+
     # ── VRAM guard ─────────────────────────────────────────────────────────
     # Seconds to wait between local model calls to avoid OOM on 8GB 5060
     local_inference_cooldown: float = 1.0

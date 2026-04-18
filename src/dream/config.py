@@ -7,7 +7,13 @@ import os
 from dataclasses import dataclass, field
 from typing import Optional
 
-from config.config import DASHSCOPE_BASE_URL, DEFAULT_MODEL, LOCAL_API_KEY, LOCAL_BASE_URL
+from config.config import (
+    DASHSCOPE_BASE_URL,
+    DEFAULT_MODEL,
+    LOCAL_API_KEY,
+    LOCAL_BASE_URL,
+    load_config,
+)
 
 
 @dataclass
@@ -69,6 +75,10 @@ class DreamConfig:
     memory_path: str = "dream_memory.json"
     log_path: str = "dream.log"
     resume_existing: bool = False
+    session_id: str = field(default_factory=lambda: os.environ.get("DREAM_SESSION_ID", "dream"))
+    memory_backend: str = field(default_factory=lambda: load_config().get("memory_backend", "auto"))
+    memory_db_url: Optional[str] = field(default_factory=lambda: load_config().get("memory_db_url") or None)
+    require_postgres: bool = field(default_factory=lambda: bool(load_config().get("require_postgres", False)))
 
     # ── VRAM guard ─────────────────────────────────────────────────────────
     # Seconds to wait between local model calls to avoid OOM on 8GB 5060

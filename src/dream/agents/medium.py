@@ -69,16 +69,56 @@ Example: ["Fact one.", "Fact two.", ...]"""
 
         Returns: {"1": "B", "2": "C", ...}  — student answers keyed by question id.
         """
-        kb_text = "\n".join(f"- {s}" for s in knowledge_base[:15])
-        answers: dict[str, str] = {}
+        if not questions:
+            return {}
 
+        kb_text = "\n".join(f"- {s}" for s in knowledge_base[:15])
+        prompt_questions = []
         for q in questions:
             qid = str(q["id"])
             options_text = "\n".join(
                 f"  {letter}) {text}"
                 for letter, text in q["options"].items()
             )
-            prompt = f"""You have been studying: {topic}
+            prompt_questions.append(f"Question {qid}: {q['question']}\n{options_text}")
+
+        prompt = f"""You have been studying: {topic}
+
+Reference material:
+{kb_text}
+
+Answer all questions. Return ONLY a JSON object mapping question id to one letter answer.
+Example: {{"1": "B", "2": "C"}}
+
+Questions:
+{chr(10).join(prompt_questions)}"""
+
+        try:
+            data = await self.generate_json(
+                prompt,
+                temperature=0.1,
+                max_tokens=max(128, len(questions) * 24),
+            )
+            answers: dict[str, str] = {}
+            if isinstance(data, dict):
+                for q in questions:
+                    qid = str(q["id"])
+                    raw = str(data.get(qid, "A")).upper()
+                    answers[qid] = next((c for c in raw if c in "ABCD"), "A")
+            if len(answers) == len(questions):
+                return answers
+            raise ValueError("missing answers in batch response")
+        except Exception as exc:
+            logger.warning("[medium] batch test failed, falling back to per-question mode: %s", exc)
+
+        answers: dict[str, str] = {}
+        for q in questions:
+            qid = str(q["id"])
+            options_text = "\n".join(
+                f"  {letter}) {text}"
+                for letter, text in q["options"].items()
+            )
+            single_prompt = f"""You have been studying: {topic}
 
 Reference material:
 {kb_text}
@@ -90,19 +130,14 @@ Answer with ONLY the letter of the correct option (A, B, C, or D). No explanatio
 
             try:
                 response = await self.generate(
-                    prompt,
-                    temperature=0.1,   # deterministic for test taking
+                    single_prompt,
+                    temperature=0.1,
                     max_tokens=8,
                 )
-                # extract first valid letter
-                letter = next(
-                    (c for c in response.upper() if c in "ABCD"),
-                    "A",  # default fallback — counts as wrong
-                )
-                answers[qid] = letter
+                answers[qid] = next((c for c in response.upper() if c in "ABCD"), "A")
             except Exception as exc:
                 logger.warning("[medium] question %s failed: %s", qid, exc)
-                answers[qid] = "A"  # penalise on failure
+                answers[qid] = "A"
 
         return answers
 

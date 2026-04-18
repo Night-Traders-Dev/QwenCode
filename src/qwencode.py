@@ -74,6 +74,7 @@ from tools.api import agentic_turn_api
 from config.config import MISSING, HISTORY_FILE, LOCAL_BASE_URL, LOCAL_API_KEY, load_config, save_config, BROWSER_DATA_DIR, MAX_TOOL_ITERS
 from config.prompt import build_prompt_session, get_input, handle_slash
 from browser.session import browser_session
+from ui.home import print_home_dashboard
 from ui.rich_ui import console
 from ui.live_render import C
 from ui.banner import print_banner
@@ -235,6 +236,7 @@ def main():
     session  = build_prompt_session()
 
     print_banner(cfg)
+    print_home_dashboard(cfg, mode="api")
 
     while True:
         cwd = str(Path.cwd())
@@ -249,7 +251,12 @@ def main():
             continue
 
         if user_input.startswith("/"):
-            ok, messages = handle_slash(user_input, cfg, messages)
+            ok, messages = handle_slash(
+                user_input,
+                cfg,
+                messages,
+                ui_context={"mode": "api"},
+            )
             if not ok:
                 console.print(f"[{C['dim']}]Bye![/]")
                 break

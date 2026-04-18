@@ -23,6 +23,7 @@ from ui.rich_ui import console
 from ui.live_render import C
 from rich.live import Live
 from rich.panel import Panel
+from rich.console import Group
 from rich.table import Table
 from rich.text import Text
 from rich import box
@@ -61,6 +62,7 @@ class StatusPanel:
         self.tokens_local: int = 0
         self.step_name: str = ""
         self.step_start: float = 0
+        self.prompt_preview: str = ""
         self.is_running: bool = False
 
         # Thread-safe state access
@@ -115,15 +117,12 @@ class StatusPanel:
             tokens_main = self.tokens_main
             tokens_local = self.tokens_local
             step_name = self.step_name
+            prompt_preview = self.prompt_preview
 
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         elapsed = self._get_elapsed()
         step_elapsed = self._get_step_elapsed()
 
-        # Build status line
-        status_parts = []
-
-        # Stage indicator with color
         stage_colors = {
             "initializing": C["dim"],
             "planning": C["brand"],
@@ -135,39 +134,48 @@ class StatusPanel:
             "idle": C["dim"]
         }
         stage_color = stage_colors.get(current_stage, C["dim"])
-        status_parts.append(f"[{stage_color}]● {current_stage}[/{stage_color}]")
 
-        # Current tool if applicable
-        if current_tool:
-            status_parts.append(f"[{C['tool']}]🔧 {current_tool}[/{C['tool']}]")
+        stage_badge = Text(current_stage.upper(), style=f"bold {stage_color}")
+        headline = Table.grid(expand=True)
+        headline.add_column(width=12)
+        headline.add_column(ratio=2)
+        headline.add_column(ratio=1, justify="right")
+        headline.add_row(
+            stage_badge,
+            Text(step_name or "Waiting for work", style=C["text"], overflow="ellipsis"),
+            Text(current_tool or "", style=C["tool"], overflow="ellipsis"),
+        )
 
-        # Step info
-        if step_name:
-            status_parts.append(f"[{C['dim']}]⏱ {step_name} ({step_elapsed})[/{C['dim']}]")
+        metrics = Table.grid(expand=True)
+        metrics.add_column(ratio=1)
+        metrics.add_column(ratio=1)
+        metrics.add_column(ratio=1)
+        metrics.add_column(ratio=1)
+        metrics.add_row(
+            Text.assemble(("Elapsed\n", C["dim"]), (elapsed, C["text"])),
+            Text.assemble(("Current Step\n", C["dim"]), (step_elapsed, C["text"])),
+            Text.assemble(
+                ("Tokens\n", C["dim"]),
+                (f"Main {tokens_main:,}", C["code"]),
+                ("  ", C["dim"]),
+                (f"Local {tokens_local:,}", C["tool"]),
+            ),
+            Text.assemble(("Clock\n", C["dim"]), (now, C["text"])),
+        )
 
-        # Token counts
-        token_parts = []
-        if tokens_main > 0:
-            token_parts.append(f"Main: [bold]{tokens_main:,}[/]")
-        if tokens_local > 0:
-            token_parts.append(f"Local: [bold]{tokens_local:,}[/]")
-        if token_parts:
-            status_parts.append(f"[{C['code']}]📊 {' | '.join(token_parts)}[/{C['code']}]")
-
-        # Elapsed time
-        status_parts.append(f"[{C['dim']}]⏲ {elapsed}[/{C['dim']}]")
-
-        # Current time
-        status_parts.append(f"[{C['dim']}]🕐 {now}[/{C['dim']}]")
-
-        # Join with separators
-        status_text = f"  {' │ '.join(status_parts)}  "
+        prompt_text = None
+        if prompt_preview:
+            prompt_text = Text(
+                prompt_preview if len(prompt_preview) <= 140 else f"{prompt_preview[:137]}...",
+                style=C["dim"],
+                overflow="ellipsis",
+            )
 
         return Panel(
-            Text.from_markup(status_text),
+            Group(headline, metrics, prompt_text) if prompt_text else Group(headline, metrics),
             title=f"[{C['brand']}]Task Status[/]",
             border_style=C["dim"],
-            padding=(0, 1)
+            padding=(0, 1),
         )
 
     def start(self, prompt: str = ""):
@@ -188,6 +196,7 @@ class StatusPanel:
             self.tokens_local = 0
             self.step_name = ""
             self.step_start = time.time()
+            self.prompt_preview = prompt.strip()
 
         self._live = Live(
             self,
@@ -541,7 +550,8 @@ async def run_task_with_timing(
     task: Task,
     main_func: Callable,
     audit_func: Callable = None,
-    enable_audit: bool = True
+    enable_audit: bool = True,
+    on_main_complete: Callable | None = None,
 ) -> Task:
     """
     Run a task with full timing and optional auditing.
@@ -581,7 +591,11 @@ async def run_task_with_timing(
         main_step.status = TaskStatus.COMPLETED
 
         panel.update(stage="formatting", step="Formatting output")
-        ui.update(result[:500] + "..." if len(result) > 500 else result, step="Main processing complete")
+        ui.update("Main response ready.", step="Main processing complete")
+        if on_main_complete:
+            callback_result = on_main_complete(task)
+            if asyncio.iscoroutine(callback_result):
+                await callback_result
 
     except Exception as e:
         main_step.end_time = time.time()

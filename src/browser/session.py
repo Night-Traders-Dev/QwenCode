@@ -8,6 +8,7 @@ from config.config import BROWSER_DATA_DIR, MEMORY_DIR
 from ui.rich_ui import console
 from ui.live_render import C, render_response
 from ui.banner import print_banner_browser
+from ui.home import print_home_dashboard
 from config.prompt import build_prompt_session, get_input_async, handle_slash
 
 try:
@@ -110,6 +111,12 @@ async def browser_session(cfg: dict, headless: bool = False):
                 console.print(f"[{C['dim']}]Fast path note:[/] {fast_llm_status['reason']}")
         elif fast_llm_status and fast_llm_status.get("reason") and cfg.get("local_fast_backend", "auto") == "megakernel":
             console.print(f"[{C['warn']}]Fast path note:[/] {fast_llm_status['reason']}")
+        print_home_dashboard(
+            cfg,
+            mode="browser",
+            memory_store=memory_store,
+            memory_status=memory_status,
+        )
         session = build_prompt_session()
 
         while True:
@@ -123,7 +130,13 @@ async def browser_session(cfg: dict, headless: bool = False):
                 continue
 
             if user_input.startswith("/"):
-                ok, _ = handle_slash(user_input, cfg, [], memory_store)
+                ok, _ = handle_slash(
+                    user_input,
+                    cfg,
+                    [],
+                    memory_store,
+                    ui_context={"mode": "browser", "memory_status": memory_status},
+                )
                 if not ok:
                     break
                 continue
@@ -169,10 +182,9 @@ async def browser_session(cfg: dict, headless: bool = False):
                     console.print(f"\n[{C['brand']}]◆ Qwen Coder (browser)[/] ", end="")
                     result_text, tool_history = await controller.send_prompt_and_get_response(
                         user_input,
-                        render_output=True,
+                        render_output=False,
                     )
                     raw_response = result_text
-                    response_rendered = bool(result_text)
                     # Estimate tokens from response
                     if result_text:
                         estimated_tokens = max(1, len(result_text) // 4)
@@ -241,10 +253,27 @@ async def browser_session(cfg: dict, headless: bool = False):
                     task.result = formatted_result
                     return quick_audit or {"score": 5.0}
 
-                await run_task_with_timing(task, main_task, audit_task, enable_audit=True)
+                async def on_main_complete(completed_task):
+                    nonlocal response_rendered
+                    if completed_task.result:
+                        render_response(
+                            completed_task.result,
+                            title="Draft Answer" if use_local_formatter else "Answer",
+                        )
+                        response_rendered = True
 
-                # Display the final answer only if nothing was already rendered live.
-                if task.result and not response_rendered:
+                await run_task_with_timing(
+                    task,
+                    main_task,
+                    audit_task,
+                    enable_audit=True,
+                    on_main_complete=on_main_complete,
+                )
+
+                if task.result and use_local_formatter and task.result != raw_response:
+                    rendered = task.result if isinstance(task.result, str) else str(task.result)
+                    render_response(rendered, title="Refined Answer")
+                elif task.result and not response_rendered:
                     rendered = task.result if isinstance(task.result, str) else str(task.result)
                     render_response(rendered, title="Answer")
 

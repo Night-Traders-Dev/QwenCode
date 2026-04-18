@@ -61,40 +61,87 @@ Respond ONLY with a JSON array of strings."""
         Returns a list of: {"statement": str, "score": float, "flag": bool}
         flag=True means the statement is suspicious / should be dropped.
         """
-        results: list[dict[str, Any]] = []
+        if not statements:
+            return []
 
-        for stmt in statements:
+        results: list[dict[str, Any]] = []
+        chunk_size = 12
+
+        for idx in range(0, len(statements), chunk_size):
+            chunk = statements[idx: idx + chunk_size]
             prompt = f"""Topic context: {topic}
+Verify each statement for factual accuracy.
+Return a JSON array with one object per statement in the same order.
+
+Statements:
+{chr(10).join(f"{pos + 1}. {stmt}" for pos, stmt in enumerate(chunk))}
+
+Respond ONLY with JSON in this shape:
+[
+  {{"statement": "text", "score": 0.0, "reason": "short reason", "flag": false}}
+]"""
+
+            try:
+                data = await self.generate_json(
+                    prompt,
+                    temperature=0.2,
+                    max_tokens=1024,
+                )
+                if isinstance(data, dict):
+                    data = data.get("results") or data.get("verifications") or data.get("items") or []
+                if not isinstance(data, list) or not data:
+                    raise ValueError("unexpected verification payload")
+
+                for stmt, item in zip(chunk, data):
+                    score = float((item or {}).get("score", 0.5))
+                    flag = bool((item or {}).get("flag", score < 0.5))
+                    results.append({
+                        "statement": stmt,
+                        "score": round(score, 3),
+                        "flag": flag,
+                        "reason": str((item or {}).get("reason", "")),
+                    })
+
+                if len(data) < len(chunk):
+                    for stmt in chunk[len(data):]:
+                        results.append(await self._verify_one(stmt, topic))
+            except Exception as exc:
+                logger.warning("[small] batch verify failed for %d statements: %s", len(chunk), exc)
+                for stmt in chunk:
+                    results.append(await self._verify_one(stmt, topic))
+
+        return results
+
+    async def _verify_one(self, stmt: str, topic: str) -> dict[str, Any]:
+        prompt = f"""Topic context: {topic}
 Statement to verify: "{stmt}"
 
 Is this statement factually accurate?
 Respond ONLY with a JSON object:
 {{"score": <float 0.0-1.0>, "reason": "<one sentence>", "flag": <true if score < 0.5>}}"""
 
-            try:
-                data = await self.generate_json(
-                    prompt,
-                    temperature=0.2,
-                    max_tokens=128,
-                )
-                score = float(data.get("score", 0.5))
-                flag = bool(data.get("flag", score < 0.5))
-                results.append({
-                    "statement": stmt,
-                    "score": round(score, 3),
-                    "flag": flag,
-                    "reason": str(data.get("reason", "")),
-                })
-            except Exception as exc:
-                logger.warning("[small] verify failed for stmt: %s | %s", stmt[:60], exc)
-                results.append({
-                    "statement": stmt,
-                    "score": 0.5,
-                    "flag": False,
-                    "reason": "verification error",
-                })
-
-        return results
+        try:
+            data = await self.generate_json(
+                prompt,
+                temperature=0.2,
+                max_tokens=128,
+            )
+            score = float(data.get("score", 0.5))
+            flag = bool(data.get("flag", score < 0.5))
+            return {
+                "statement": stmt,
+                "score": round(score, 3),
+                "flag": flag,
+                "reason": str(data.get("reason", "")),
+            }
+        except Exception as exc:
+            logger.warning("[small] verify failed for stmt: %s | %s", stmt[:60], exc)
+            return {
+                "statement": stmt,
+                "score": 0.5,
+                "flag": False,
+                "reason": "verification error",
+            }
 
     # ── Examine phase: receiving answer key ────────────────────────────────
 

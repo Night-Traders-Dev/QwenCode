@@ -11,6 +11,8 @@ Usage:
 """
 
 import asyncio
+import hashlib
+import json
 import logging
 import signal
 import time
@@ -27,6 +29,11 @@ from dream.phases import (
     phase_gather,
     phase_verify,
 )
+
+try:
+    from memory.store import MemoryStore
+except Exception:
+    MemoryStore = None
 
 logger = logging.getLogger("dream.session")
 
@@ -67,6 +74,17 @@ class DreamSession:
         self.memory = DreamMemory(self.cfg.memory_path)
         self._stop_flag = False
         self._cycle = 0
+        self.memory_store = None
+
+        if MemoryStore is not None:
+            try:
+                self.memory_store = MemoryStore(
+                    db_url=self.cfg.memory_db_url,
+                    backend=self.cfg.memory_backend,
+                    require_postgres=self.cfg.require_postgres,
+                )
+            except Exception as exc:
+                logger.warning("[session] memory store unavailable for Dream sync: %s", exc)
 
     # ── Entry point ────────────────────────────────────────────────────────
 
@@ -107,6 +125,8 @@ class DreamSession:
             else:
                 logger.info("[session] resuming — subtopics: %s", self.memory.subtopics)
 
+            self._persist_session_overview()
+
             # Main cycle loop
             while not self._stop_flag and time.time() < deadline:
                 self._cycle += 1
@@ -130,6 +150,7 @@ class DreamSession:
                 # Checkpoint
                 if self._cycle % self.cfg.checkpoint_every_n_cycles == 0:
                     self.memory.save()
+                    self._persist_session_overview()
                     logger.info("[session] checkpoint saved — cycle %d", self._cycle)
 
                 # Convergence check
@@ -161,6 +182,9 @@ class DreamSession:
         logger.info("Recent scores  : %s", [f"{s:.1%}" for s in summary["recent_scores"]])
         logger.info("Converged      : %s", summary["converged"])
         logger.info("=" * 60)
+        self._persist_session_overview()
+        if self.memory_store is not None:
+            self.memory_store.close()
 
     # ── Single cycle ───────────────────────────────────────────────────────
 
@@ -181,6 +205,7 @@ class DreamSession:
         # ── Phase 2: Verify ────────────────────────────────────────────────
         await asyncio.sleep(cfg.local_inference_cooldown)
         _verified, _flagged = await phase_verify(topic, raw_statements, memory, small, cfg)
+        self._persist_verified_statements(_verified)
 
         # ── Phase 3: Examine ───────────────────────────────────────────────
         await asyncio.sleep(cfg.local_inference_cooldown)
@@ -198,6 +223,7 @@ class DreamSession:
 
         # ── Phase 4: Adapt ─────────────────────────────────────────────────
         await phase_adapt(topic, cycle, grade_report, memory, cloud, cfg)
+        self._persist_cycle_report(cycle, grade_report)
 
         # ── Cycle summary ──────────────────────────────────────────────────
         scores = memory.recent_scores(3)
@@ -215,3 +241,74 @@ class DreamSession:
     def _request_stop(self) -> None:
         logger.info("[session] SIGTERM received — stopping after current cycle")
         self._stop_flag = True
+
+    def _topic_digest(self) -> str:
+        return hashlib.sha1(self.topic.encode("utf-8")).hexdigest()[:16]
+
+    def _persist_session_overview(self) -> None:
+        if self.memory_store is None:
+            return
+
+        session_id = self.cfg.session_id
+        self.memory_store.get_or_create_session(
+            session_id,
+            model_main=self.cfg.cloud.name,
+            model_local=f"{self.cfg.medium.name}, {self.cfg.small.name}",
+        )
+        summary = self.memory.summary()
+        payload = {
+            "topic": self.topic,
+            "summary": summary,
+            "subtopics": self.memory.subtopics,
+            "memory_path": self.cfg.memory_path,
+            "log_path": self.cfg.log_path,
+        }
+        self.memory_store.set_memory("dream:last_summary", payload, category="dream")
+        self.memory_store.upsert_knowledge(
+            key=f"dream:summary:{self._topic_digest()}",
+            content=json.dumps(payload, indent=2),
+            source="dream",
+            category="dream_summary",
+            session_id=session_id,
+            metadata={"topic": self.topic, "kind": "dream_summary"},
+        )
+
+    def _persist_verified_statements(self, statements: list[str]) -> None:
+        if self.memory_store is None or not statements:
+            return
+
+        session_id = self.cfg.session_id
+        topic_digest = self._topic_digest()
+        for statement in statements:
+            statement_digest = hashlib.sha1(statement.encode("utf-8")).hexdigest()[:16]
+            self.memory_store.upsert_knowledge(
+                key=f"dream:knowledge:{topic_digest}:{statement_digest}",
+                content=statement,
+                source="dream",
+                category="dream_knowledge",
+                session_id=session_id,
+                metadata={"topic": self.topic, "kind": "verified_statement"},
+            )
+
+    def _persist_cycle_report(self, cycle: int, grade_report: dict) -> None:
+        if self.memory_store is None:
+            return
+
+        session_id = self.cfg.session_id
+        payload = {
+            "topic": self.topic,
+            "cycle": cycle,
+            "score": grade_report.get("score", 0.0),
+            "passed": grade_report.get("passed", False),
+            "concept_gaps": grade_report.get("concept_gaps", []),
+            "weak_areas": self.memory.weak_areas,
+            "knowledge_size": len(self.memory.knowledge_base),
+        }
+        self.memory_store.upsert_knowledge(
+            key=f"dream:cycle:{self._topic_digest()}:{cycle:06d}",
+            content=json.dumps(payload, indent=2),
+            source="dream",
+            category="dream_cycle",
+            session_id=session_id,
+            metadata={"topic": self.topic, "cycle": cycle, "kind": "cycle_report"},
+        )

@@ -12,6 +12,7 @@ from rich.panel import Panel
 from rich.box import SIMPLE
 from config.config import HISTORY_FILE, save_config, LOCAL_MODEL
 from tools.definitions import TOOLS
+from ui.home import HOME_SECTIONS, print_home_dashboard, print_home_section
 from ui.rich_ui import console
 from ui.live_render import C
 
@@ -38,7 +39,7 @@ except ImportError:
 class SlashCompleter(Completer):
     SLASH_COMMANDS = [
         "/help", "/clear", "/model", "/tools", "/config", "/exit",
-        "/memory", "/audit", "/local", "/queue", "/tokens"
+        "/memory", "/audit", "/local", "/queue", "/tokens", "/home", "/go"
     ]
 
     def get_completions(self, document, complete_event):
@@ -66,6 +67,8 @@ def print_help():
         ("/local [text]",      "Send text to local LLM"),
         ("/queue",             "Show task queue status"),
         ("/tokens",            "Show token usage statistics"),
+        ("/home",              "Show the app home dashboard"),
+        (f"/go <{'|'.join(HOME_SECTIONS[1:])}>", "Open a dashboard section"),
         ("/exit",              "Quit the session"),
         ("Ctrl-D",             "Quit"),
         ("Ctrl-C",             "Cancel current input"),
@@ -76,17 +79,42 @@ def print_help():
     console.print(Panel(t, title="Commands", border_style=C["dim"]))
 
 def handle_slash(
-    cmd: str, cfg: dict, messages: list, memory_store=None
+    cmd: str,
+    cfg: dict,
+    messages: list,
+    memory_store=None,
+    ui_context: dict | None = None,
 ) -> tuple[bool, list]:
     parts = cmd.strip().split(maxsplit=1)
     verb  = parts[0].lower()
     arg   = parts[1].strip() if len(parts) > 1 else ""
+    ui_context = ui_context or {}
+    mode = ui_context.get("mode", "api")
+    memory_status = (
+        ui_context.get("memory_status")
+        or (memory_store.get_status() if memory_store and hasattr(memory_store, "get_status") else None)
+    )
 
     if verb == "/exit":
         return False, messages
 
     if verb == "/help":
         print_help()
+    elif verb == "/home":
+        print_home_dashboard(
+            cfg,
+            mode=mode,
+            memory_store=memory_store,
+            memory_status=memory_status,
+        )
+    elif verb == "/go":
+        print_home_section(
+            arg or "home",
+            cfg,
+            memory_store=memory_store,
+            memory_status=memory_status,
+            mode=mode,
+        )
     elif verb == "/clear":
         console.print(f"[{C['ok']}]History cleared.[/]")
         if memory_store and MEMORY_AVAILABLE:
@@ -104,14 +132,7 @@ def handle_slash(
                 f"[{C['dim']}]Current model:[/] [{C['accent']}]{cfg['model']}[/]"
             )
     elif verb == "/tools":
-        t = Table(box=SIMPLE, show_header=True,
-                  header_style=C["brand"])
-        t.add_column("Tool",        style=C["tool"])
-        t.add_column("Description", style=C["dim"])
-        for tool in TOOLS:
-            fn = tool["function"]
-            t.add_row(fn["name"], fn["description"][:80])
-        console.print(t)
+        print_home_section("tools", cfg, memory_store=memory_store, memory_status=memory_status, mode=mode)
     elif verb == "/config":
         safe = {
             k: ("***" if k == "api_key" and v else v)
@@ -197,7 +218,7 @@ def handle_slash(
                     ])
                     console.print(response)
                 except Exception as e:
-                    console.print(f"[{C['error']}]Error: {e}[/]")
+                    console.print(f"[{C['err']}]Error: {e}[/]")
             else:
                 console.print(f"[{C['dim']}]Usage: /local <text to send to local LLM>[/]")
     elif verb == "/queue":

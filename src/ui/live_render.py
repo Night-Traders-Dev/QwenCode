@@ -1,11 +1,12 @@
 import re
 from pathlib import Path
-from textwrap import TextWrapper
 from ui.rich_ui import console
-from rich.align import Align
 from rich import box
+from rich.console import Group
 from rich.markdown import Markdown
+from rich.padding import Padding
 from rich.panel import Panel
+from rich.rule import Rule
 from rich.text import Text
 
 # ── colour palette ────────────────────────────────────────────────────────────
@@ -58,26 +59,33 @@ def normalize_markdown(text: str) -> str:
 
 
 def render_response(text: str, title: str = "Response"):
-    """Render assistant output in a readable, width-aware container."""
+    """Render assistant output in a readable, width-aware layout."""
     cleaned = normalize_markdown(text)
     if not cleaned:
         return
 
-    terminal_width = max(console.size.width, 60)
-    panel_width = min(max(terminal_width - 4, 56), 100)
-    panel = Panel(
-        Markdown(cleaned, code_theme="monokai"),
-        title=f"[{C['brand']}]{title}[/]",
-        border_style=C["dim"],
-        box=box.ROUNDED,
-        padding=(0, 1),
-        width=panel_width,
-    )
+    paragraphs = [part.strip() for part in cleaned.split("\n\n") if part.strip()]
+    lead = ""
+    body = cleaned
 
-    if panel_width < terminal_width - 1:
-        console.print(Align.center(panel))
-    else:
-        console.print(panel)
+    if paragraphs and len(paragraphs[0]) <= 220 and not paragraphs[0].startswith(("#", "-", "*", "1.")):
+        lead = paragraphs[0]
+        body = "\n\n".join(paragraphs[1:]).strip()
+
+    blocks = [Rule(title=f"[{C['brand']}]{title}[/]", style=C["brand"])]
+    if lead:
+        blocks.append(
+            Panel(
+                Text(lead, style=C["text"]),
+                border_style=C["brand"],
+                box=box.ROUNDED,
+                padding=(0, 1),
+            )
+        )
+    if body:
+        blocks.append(Padding(Markdown(body, code_theme="monokai"), (0, 1)))
+
+    console.print(Group(*blocks))
 
 
 # ── live renderer ─────────────────────────────────────────────────────────────
@@ -197,14 +205,8 @@ class LiveRenderer:
 
     def finish(self, render_output: bool = True):
         """Finish rendering and display final formatted output."""
-        # Display thinking status if present
-        if self.thinking_text:
-            console.print(f"\n[{C['dim']}]💭 Thinking...[/]", style=C["dim"])
-            if self._thinking_done:
-                console.print(f"[{C['dim']}]✓ Thinking completed[/]\n", style=C["dim"])
-
-        # Render the complete answer as markdown for professional formatting
         if render_output and self.answer_text:
-            # Clean up any duplicate content
             cleaned = self._clean_duplicates(self.answer_text)
             render_response(cleaned)
+        elif render_output and self.thinking_text:
+            console.print(f"[{C['dim']}]No final answer text was captured.[/]")

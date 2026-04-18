@@ -1,320 +1,394 @@
 # QwenCode
 
-A powerful AI coding harness that leverages Qwen Coder models for interactive development assistance, with browser-based interaction and local LLM support.
+QwenCode is a terminal-first Qwen harness with a browser runner, a local helper stack, PostgreSQL-backed memory, and a Dream training loop. It is built to feel like a polished operator console instead of a raw transcript dump.
 
-## Features
+## What it does
 
-- **Triple-Model Architecture**: Use the cloud/browser Qwen model with a local audit model (`qwen3.5:4b`) and a fast helper model (`qwen3.5:0.8b`)
-- **Browser Mode**: Interact with Qwen's web interface directly, including tool execution
-- **Memory System**: Persistent conversation history using PostgreSQL or file-based storage
-- **Local LLM Integration**:
-  - Text formatting and cleanup
-  - Prompt/response auditing for quality assurance
-  - Fast response gating with the `qwen3.5:0.8b` helper model
-  - Auxiliary tasks while main model works
-  - Summarization and key point extraction
-- **Task Tracking & Timing**: Non-blocking timers, step-level timing breakdown, task queue management
-- **Live Token Usage**: Real-time token tracking for both main and local LLMs
-- **Thinking UI**: Claude Code-style thinking visualization with live progress indicators
-- **Fish-Shell Style UX**: Command history suggestions and tab-completion for slash commands
-- **Rich Terminal UI**: Beautiful output with colors, panels, and live rendering
+- Runs in **API mode** or **browser mode**
+- Uses a **triple-model lane**
+  - cloud/browser model for the main answer
+  - `qwen3.5:4b` for heavier local formatting and audits
+  - `qwen3.5:0.8b` for fast local gating and Dream verification
+- Stores conversation, tool output, audits, and Dream knowledge in **PostgreSQL** or file fallback
+- Ships a **Home UI** and section navigation for workspace, models, memory, tools, and Dream
+- Renders answers more intelligently, including a **weather-style report view** for forecast-heavy responses
+- Includes a **Dream live UI** for Gather → Verify → Examine → Adapt sessions
+
+## Highlights
+
+- **Home dashboard** on startup with `/home` and `/go <section>`
+- **Professional terminal rendering** with responsive status panels and structured answer views
+- **Semantic response rendering** for weather reports and improved markdown fallback
+- **Dream loop** with live progress UI, session summaries, and PostgreSQL sync
+- **Expanded toolset** for file reads, chunked file reads, shell, git, knowledge search, and Dream inspection
+- **Warm local model path** while the cloud/browser model is working
+- **MegaKernel / Mirage submodule** vendored for future fast-path work
 
 ## Installation
 
 ### Prerequisites
 
 - Python 3.10+
-- Node.js (for some dependencies)
-- Chrome/Chromium browser
-- Ollama (optional, for local LLM features)
+- Chrome or Chromium
+- Ollama for local models
+- PostgreSQL if you want durable multi-session memory
 
 ### Setup
 
-1. **Clone the repository**:
-   ```bash
-   git clone <repository-url>
-   cd QwenCode
-   git submodule update --init --recursive
-   ```
-
-2. **Install dependencies**:
-   ```bash
-   pip install -e .
-   # or using uv
-   uv sync
-   ```
-
-3. **Configure API access** (for cloud models):
-   ```bash
-   export DASHSCOPE_API_KEY="your-api-key"
-   # or
-   export OPENAI_API_KEY="your-api-key"
-   ```
-
-4. **Set up Ollama** (optional, for local LLM):
-   ```bash
-   # Install Ollama from https://ollama.ai
-   ollama pull qwen3.5:4b
-   ollama pull qwen3.5:0.8b
-   ```
-
-5. **Set up PostgreSQL** (optional, for advanced memory):
-   ```bash
-   # Install PostgreSQL
-   # Create database and set environment variable
-   export MEMORY_DB_URL="postgresql://user:pass@localhost:5432/qwencode"
-   ```
-
-## Usage
-
-### Basic Usage
+1. Clone the repo and fetch submodules:
 
 ```bash
-# API mode (direct API calls)
+git clone <repository-url>
+cd QwenCode
+git submodule update --init --recursive
+```
+
+2. Install dependencies:
+
+```bash
+uv sync
+```
+
+3. Pull the local models:
+
+```bash
+ollama pull qwen3.5:4b
+ollama pull qwen3.5:0.8b
+```
+
+4. Configure your cloud key if you want API mode:
+
+```bash
+export DASHSCOPE_API_KEY="your-api-key"
+# or
+export OPENAI_API_KEY="your-api-key"
+```
+
+5. Configure PostgreSQL if you want database-backed memory:
+
+```bash
+export MEMORY_BACKEND=postgresql
+export REQUIRE_POSTGRES=true
+export MEMORY_DB_URL="postgresql://user:pass@localhost:5432/qwencode"
+```
+
+## Running QwenCode
+
+### API mode
+
+```bash
 python src/qwencode.py
+```
 
-# Browser mode (interact via browser)
+### Browser mode
+
+```bash
 python src/qwencode.py --browser
+```
 
-# Browser mode with headless Chrome
+### Headless browser mode
+
+```bash
 python src/qwencode.py --browser --headless
 ```
 
-### Slash Commands
+## Home UI and navigation
+
+On startup, QwenCode now opens on a home dashboard with section cards for:
+
+- workspace
+- models
+- memory
+- tools
+- dream
+
+Navigation commands:
+
+- `/home`
+- `/go workspace`
+- `/go models`
+- `/go memory`
+- `/go tools`
+- `/go dream`
+
+## Slash commands
 
 | Command | Description |
-|---------|-------------|
-| `/help` | Show help message |
-| `/clear` | Clear conversation history |
-| `/model [name]` | Show or change active model |
-| `/tools` | List available tools |
-| `/config` | Show configuration |
+|---|---|
+| `/help` | Show command help |
+| `/clear` | Clear the current conversation |
+| `/model [name]` | Show or change the active model |
+| `/tools` | Open the tools section |
+| `/config` | Show effective config |
 | `/memory` | Show memory status |
 | `/memory show` | Show recent messages |
-| `/audit <text>` | Audit text using local LLM |
-| `/local <text>` | Send text to local LLM |
-| `/queue` | Show task queue status with timing |
-| `/tokens` | Show token usage statistics |
-| `/exit` | Quit session |
+| `/audit <text>` | Audit text with the local model |
+| `/local <text>` | Send a prompt directly to the local model |
+| `/queue` | Show task queue status |
+| `/tokens` | Show token usage |
+| `/home` | Open the home dashboard |
+| `/go <section>` | Open a specific dashboard section |
+| `/exit` | Quit |
 
-### Keyboard Shortcuts
+## Smart response rendering
 
-- `Ctrl-D`: Quit session
-- `Ctrl-C`: Cancel current input
-- `Alt-Enter`: New line in multiline input
-- `Tab`: Auto-complete slash commands
-- `↑/↓`: Navigate command history
+QwenCode no longer treats every answer as one generic markdown blob.
 
-## Configuration
+### Current rendering behavior
 
-Configuration is stored in `~/.qwencode/config.json`. You can also use environment variables:
+- standard markdown answers render with a cleaner lead-summary + body layout
+- dense forecast-style answers can be recognized and rendered as a **weather report**
+- the status panel is multi-row and width-aware instead of a single overflow line
+- browser-mode answers are shown as soon as the main response is ready, while the audit continues in the background
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `DASHSCOPE_API_KEY` | API key for DashScope/Qwen | - |
-| `OPENAI_API_KEY` | Alternative API key | - |
-| `QWEN_BASE_URL` | Custom API base URL | https://dashscope-intl.aliyuncs.com/compatible-mode/v1 |
-| `QWEN_MODEL` | Default model name | qwen3-coder-plus |
-| `LOCAL_MODEL` | Local Ollama model | qwen3.5:4b |
-| `LOCAL_FAST_MODEL` | Fast local helper model | qwen3.5:0.8b |
-| `LOCAL_FAST_BACKEND` | Fast helper backend (`auto`, `ollama`, `megakernel`) | auto |
-| `LOCAL_FAST_ENABLED` | Enable fast local helper lane | true |
-| `MEGAKERNEL_MODEL` | Hugging Face model id for MegaKernel probing | Qwen/Qwen3.5-0.8B |
-| `MEGAKERNEL_PATH` | Local MegaKernel/Mirage checkout path | third_party/mirage |
-| `MEMORY_DB_URL` | PostgreSQL connection URL | (uses file-based) |
-| `LOCAL_ENABLED` | Enable local LLM integration | true |
-| `AUDIT_ENABLED` | Enable automatic response auditing | true |
+### Weather report rendering
 
-## Memory System
+If the final answer contains weather-heavy fields such as:
 
-The memory system provides persistent storage for:
+- current weather
+- temperature
+- feels like
+- humidity
+- wind
+- UV index
+- visibility
+- forecast / weekend outlook
 
-- **Conversation History**: All messages are stored per session
-- **Tool Executions**: Log of all tool calls and results
-- **User Preferences**: Custom memories and settings
-- **Session Metadata**: Model info, timestamps, etc.
-- **Audit Results**: Quality scores and feedback from local LLM
+QwenCode will render:
 
-### Storage Backends
+- a current conditions summary
+- metric cards
+- today’s narrative
+- advisories
+- an extended forecast table when enough daily structure is present
 
-1. **File-based** (default): JSON files in `~/.qwencode/memory/`
-2. **PostgreSQL**: For multi-session, multi-user scenarios
+This is handled in the UI renderer rather than by relying on the model to format perfectly.
 
-## Local LLM & Auditing
+## Local model stack
 
-When Ollama is running with `qwen3.5:4b` and `qwen3.5:0.8b`, the system automatically:
+QwenCode uses a three-lane local/cloud setup:
 
-1. **Audits your prompts** before sending to the cloud model
-2. **Warms both local models** while the cloud/browser model is working
-3. **Runs a fast gate** with `qwen3.5:0.8b` to skip unnecessary heavy audits
-4. **Escalates to `qwen3.5:4b`** only when the fast gate flags the answer
-5. **Updates memory** with audit results for future reference
+1. **Main cloud/browser lane**
+   - cloud API model or Qwen web UI
+2. **Local audit / formatter lane**
+   - `qwen3.5:4b`
+3. **Fast local gate**
+   - `qwen3.5:0.8b`
 
-### MegaKernel Status
+### What the helper models do
 
-The repo now vendors MegaKernel via the `third_party/mirage` submodule. The
-fast helper path probes that checkout, but the current `mpk` branch only
-registers Qwen3 builders, so `Qwen/Qwen3.5-0.8B` stays on the Ollama fast path
-until upstream exposes a Qwen3.5-compatible builder.
+- warm while the main lane is working
+- gate easy answers quickly
+- escalate to deeper local auditing only when needed
+- support Dream verification and grading
 
-### Manual Local LLM Commands
+### MegaKernel / Mirage
 
-- **Audit Prompts**: Get feedback on prompt clarity and safety
-  ```
-  /audit Write a function to delete all files
-  ```
-
-- **Chat with Local LLM**: Direct interaction
-  ```
-  /local Explain quantum computing in simple terms
-  ```
-
-- **View Token Usage**: Track consumption
-  ```
-  /tokens
-  ```
-
-- **View Task Queue**: See current/pending tasks with timing
-  ```
-  /queue
-  ```
-
-### Programmatic Usage
-
-```python
-from memory.local_llm import get_local_llm
-
-llm = get_local_llm()
-
-# Format text
-formatted = llm.format_text(raw_output, "markdown")
-
-# Audit a response
-audit = llm.audit_response(response, original_prompt)
-print(f"Quality score: {audit['score']}/10")
-
-# Summarize content
-summary = llm.summarize(long_text, max_length=100)
-
-# Extract key points
-points = llm.extract_key_points(document)
-```
-
-## Task Tracking & Timing
-
-The system includes comprehensive task tracking:
-
-- **Non-blocking timers**: Tasks run asynchronously with timing
-- **Step-level breakdown**: See time spent on each phase (processing, auditing, etc.)
-- **Task queue**: Multiple tasks can be queued and tracked
-- **Live status updates**: Real-time progress indicators
-
-### Thinking UI
-
-The Claude Code-style thinking UI shows:
-- Animated spinner during processing
-- Current step being executed
-- Step timing as each completes
-- Final summary with total time and token count
-- Audit score when available
+The repo includes the `third_party/mirage` submodule for MegaKernel-related probing. The fast helper still uses the Ollama path for `qwen3.5:0.8b` because the current upstream branch does not yet expose a Qwen 3.5-compatible builder for the intended fast path.
 
 ## Tools
 
-Available tools for the AI to use:
+The built-in tool schemas currently expose:
 
-| Tool | Description |
-|------|-------------|
-| `read_file` | Read file contents |
-| `write_file` | Write/create files |
-| `run_bash` | Execute shell commands |
-| `list_directory` | List directory contents |
-| `search_files` | Search for patterns in files |
-| `glob_files` | Find files by glob pattern |
-| `web_search` | Search the web (browser mode) |
-| `web_extractor` | Extract content from URLs (browser mode) |
-| `code_interpreter` | Run Python code (browser mode) |
+| Tool | Purpose |
+|---|---|
+| `read_file` | Read a file |
+| `read_file_chunk` | Read a line range with line numbers |
+| `write_file` | Write a file |
+| `run_bash` | Run a shell command |
+| `git_status` | Show repo status |
+| `git_diff` | Show a diff preview |
+| `search_knowledge` | Search memory / knowledge storage |
+| `inspect_dream_memory` | Inspect Dream memory JSON |
+| `list_directory` | List files and folders |
+| `search_files` | Search across files |
+| `glob_files` | Find files by glob |
+
+## Memory and PostgreSQL
+
+QwenCode memory stores:
+
+- conversation history
+- tool executions
+- audit results
+- durable knowledge rows
+- session metadata
+- Dream summaries, cycle reports, and verified Dream knowledge
+
+### Backends
+
+1. **PostgreSQL**
+   - recommended for long-running use
+   - searchable knowledge rows
+   - Dream sync works here too
+2. **File fallback**
+   - used when PostgreSQL is not configured and not required
+
+### Dream data in PostgreSQL
+
+Dream now writes:
+
+- `dream_summary`
+- `dream_cycle`
+- `dream_knowledge`
+
+Rows are keyed with the Dream session id so separate Dream runs on the same topic do not overwrite one another.
+
+## Dream mode
+
+Dream is the multi-agent training loop:
+
+1. Gather
+2. Verify
+3. Examine
+4. Adapt
+
+### Run Dream
+
+```bash
+python src/run_dream.py "basic arithmetic"
+```
+
+### Run Dream without the live board
+
+```bash
+python src/run_dream.py "basic arithmetic" --plain
+```
+
+### Resume Dream from an existing memory file
+
+```bash
+python src/run_dream.py "basic arithmetic" --resume --memory dream_basic_arithmetic.json
+```
+
+### Override Dream session id for PostgreSQL sync
+
+```bash
+python src/run_dream.py "basic arithmetic" --session-id dream-basic-v2
+```
+
+### Dream UI
+
+The live Dream UI shows:
+
+- topic and model stack
+- cycle and phase
+- knowledge size and best score
+- subtopics
+- weak areas
+- recent activity
+- phase-by-phase completion
+
+### Dream performance notes
+
+Recent Dream improvements include:
+
+- batched medium-model test taking
+- structured-response enforcement for the 4B and 0.8B lanes
+- staged verification so the 0.8B spends less time generating explanations for obviously good statements
+- PostgreSQL persistence for Dream summaries and knowledge
+
+## Configuration
+
+Configuration is stored in `~/.qwencode/config.json`. Important environment variables:
+
+| Variable | Description | Default |
+|---|---|---|
+| `DASHSCOPE_API_KEY` | DashScope key | unset |
+| `OPENAI_API_KEY` | alternate cloud key | unset |
+| `QWEN_BASE_URL` | API base URL | DashScope compatible endpoint |
+| `QWEN_MODEL` | default cloud model | `qwen3-coder-plus` |
+| `LOCAL_ENABLED` | enable local helper model | `true` |
+| `LOCAL_MODEL` | heavier local helper | `qwen3.5:4b` |
+| `LOCAL_FAST_ENABLED` | enable fast helper lane | `true` |
+| `LOCAL_FAST_MODEL` | fast helper model | `qwen3.5:0.8b` |
+| `LOCAL_FAST_BACKEND` | `auto`, `ollama`, or `megakernel` | `auto` |
+| `LOCAL_FORMAT_ENABLED` | enable local output reformatter | `false` |
+| `AUDIT_ENABLED` | enable local auditing | `true` |
+| `MEMORY_BACKEND` | `auto`, `postgresql`, or `file` | `auto` |
+| `REQUIRE_POSTGRES` | fail instead of falling back | `false` |
+| `MEMORY_DB_URL` | PostgreSQL connection URL | unset |
+| `SESSION_ID` | main app session id | `default` |
+| `MEGAKERNEL_MODEL` | MegaKernel model id | `Qwen/Qwen3.5-0.8B` |
+| `MEGAKERNEL_PATH` | local Mirage checkout | `third_party/mirage` |
 
 ## Architecture
 
-```
+```text
 src/
-├── qwencode.py          # Main entry point
+├── qwencode.py
+├── run_dream.py
 ├── browser/
-│   ├── controller.py    # Browser automation
-│   ├── session.py       # Session management
-│   └── transcript_mirror.py  # DOM scraping
+│   ├── controller.py
+│   ├── session.py
+│   └── transcript_mirror.py
 ├── config/
-│   ├── config.py        # Configuration handling
-│   └── prompt.py        # Prompt session & commands
+│   ├── config.py
+│   └── prompt.py
+├── dream/
+│   ├── agents/
+│   ├── memory/
+│   ├── phases/
+│   ├── config.py
+│   └── session.py
 ├── memory/
-│   ├── store.py         # Memory storage backend
-│   └── local_llm.py     # Local LLM client
+│   ├── fast_llm.py
+│   ├── local_llm.py
+│   └── store.py
 ├── tools/
-│   ├── api.py           # Tool dispatch
-│   ├── tools.py         # Tool implementations
-│   └── definitions.py   # Tool schemas
+│   ├── api.py
+│   ├── definitions.py
+│   └── tools.py
 └── ui/
-    ├── banner.py        # Welcome banner
-    ├── live_render.py   # Live output rendering
-    ├── rich_ui.py       # Rich console wrapper
-    └── task_tracker.py  # Task timing & queue management
+    ├── banner.py
+    ├── dream_ui.py
+    ├── home.py
+    ├── live_render.py
+    ├── rich_ui.py
+    └── task_tracker.py
 ```
 
-## Workflow
+## Performance tips
 
-```
-┌─────────────┐     ┌──────────────┐     ┌─────────────┐     ┌─────────────┐
-│ User Input  │ ──► │ Local Audit  │ ──► │ Cloud Model │ ──► │ Response    │
-└─────────────┘     └──────────────┘     └─────────────┘     └─────────────┘
-                           │                                       │
-                           │                                       ▼
-                    ┌──────▼──────┐                        ┌─────────────┐
-                    │ Score/Flags │                        │ Local Audit │
-                    └─────────────┘                        └─────────────┘
-                                                                   │
-                                                                   ▼
-                                                            ┌─────────────┐
-                                                            │ Store in    │
-                                                            │ Memory      │
-                                                            └─────────────┘
-```
+1. Keep `qwen3.5:4b` and `qwen3.5:0.8b` loaded locally.
+2. Use browser headless mode after login is stable.
+3. Prefer PostgreSQL once memory volume grows.
+4. Let the fast helper lane clear easy answers before escalating to deeper audits.
+5. Use the Dream live UI for long sessions; use `--plain` for log-heavy automation.
 
 ## Troubleshooting
 
-### Browser Mode Issues
+### Browser mode
 
-- **Profile locked**: The system automatically handles profile locks, or uses a fallback profile
-- **Login required**: Complete OAuth in the browser window when prompted
-- **Headless failures**: Try without `--headless` for debugging
-- **Chrome not found**: Run `playwright install chrome`
+- If the profile is locked, QwenCode will attempt cleanup or a fallback browser profile.
+- If OAuth is required, complete login in the browser window once and then retry headless mode.
 
-### Local LLM Issues
+### Local models
 
-- **Model not found**: Run `ollama pull qwen3.5:4b`
-- **Connection refused**: Ensure Ollama is running (`ollama serve`)
-- **Slow responses**: Consider using a smaller model or increasing resources
+- If the local models are missing, run:
 
-### Memory Issues
+```bash
+ollama pull qwen3.5:4b
+ollama pull qwen3.5:0.8b
+```
 
-- **PostgreSQL connection**: Verify URL format and credentials
-- **File permissions**: Ensure `~/.qwencode/` is writable
+- If Ollama is not reachable:
 
-### Task/Audit Issues
+```bash
+ollama serve
+```
 
-- **Audit disabled**: Check `audit_enabled` in config or set `AUDIT_ENABLED=true`
-- **No audit score shown**: Local LLM may not be available; check with `/queue`
+### PostgreSQL
 
-## Performance Tips
+- If you require PostgreSQL, set both:
 
-1. **Use headless mode** for faster browser operation once logged in
-2. **Keep `qwen3.5:0.8b` available locally** so the fast gate can clear easy answers quickly
-3. **Monitor token usage** with `/tokens` to track consumption
-4. **Use PostgreSQL** for better performance with many sessions
+```bash
+export MEMORY_BACKEND=postgresql
+export REQUIRE_POSTGRES=true
+```
+
+- Verify `MEMORY_DB_URL` is valid and reachable from the same machine.
 
 ## License
 
-MIT License - see LICENSE file for details.
-
-## Contributing
-
-Contributions welcome! Please open an issue or submit a PR.
+MIT

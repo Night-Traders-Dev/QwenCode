@@ -65,14 +65,14 @@ Respond ONLY with a JSON array of strings."""
             return []
 
         results: list[dict[str, Any]] = []
-        chunk_size = 4
+        chunk_size = 8
 
         for idx in range(0, len(statements), chunk_size):
             chunk = statements[idx: idx + chunk_size]
             prompt = f"""Topic context: {topic}
 Verify each statement for factual accuracy.
 Respond ONLY with a JSON object in this exact shape:
-{{"results": [{{"id": 1, "score": 1.0, "flag": false, "reason": "short reason"}}]}}
+{{"results": [{{"id": 1, "score": 1.0, "flag": false}}]}}
 Return one result for each statement in the same order.
 
 Statements:
@@ -97,7 +97,7 @@ Statements:
                         "statement": stmt,
                         "score": round(score, 3),
                         "flag": flag,
-                        "reason": str((item or {}).get("reason", "")),
+                        "reason": "",
                     })
 
                 if len(items) < len(chunk):
@@ -108,6 +108,7 @@ Statements:
                 for stmt in chunk:
                     results.append(await self._verify_one(stmt, topic))
 
+        await self._fill_reason_gaps(results, topic)
         return results
 
     async def _verify_one(self, stmt: str, topic: str) -> dict[str, Any]:
@@ -121,8 +122,9 @@ Respond ONLY with a JSON object:
         try:
             data = await self.generate_json(
                 prompt,
-                temperature=0.2,
+                temperature=0.0,
                 max_tokens=128,
+                response_format={"type": "json_object"},
             )
             score = float(data.get("score", 0.5))
             flag = bool(data.get("flag", score < 0.5))
@@ -170,6 +172,73 @@ Respond ONLY with a JSON object:
                 if ordered:
                     return ordered[:expected]
 
+        return []
+
+    async def _fill_reason_gaps(self, results: list[dict[str, Any]], topic: str) -> None:
+        needs_reason = [
+            item for item in results
+            if not item.get("reason")
+            and (
+                item.get("flag")
+                or 0.45 <= float(item.get("score", 0.5)) <= 0.8
+            )
+        ]
+        if not needs_reason:
+            return
+
+        chunk_size = 6
+        for idx in range(0, len(needs_reason), chunk_size):
+            chunk = needs_reason[idx: idx + chunk_size]
+            prompt = f"""Topic context: {topic}
+Explain the verification verdict for each statement below in one short sentence.
+Respond ONLY with a JSON object in this exact shape:
+{{"results": [{{"id": 1, "reason": "brief explanation"}}]}}
+
+Statements:
+{chr(10).join(
+    f"{pos + 1}. score={item['score']:.3f} flag={str(item['flag']).lower()} statement={item['statement']}"
+    for pos, item in enumerate(chunk)
+)}"""
+
+            try:
+                data = await self.generate_json(
+                    prompt,
+                    temperature=0.0,
+                    max_tokens=384,
+                    response_format={"type": "json_object"},
+                )
+                reasons = self._coerce_reason_results(data, len(chunk))
+                for item, reason in zip(chunk, reasons):
+                    item["reason"] = reason or item.get("reason", "")
+            except Exception as exc:
+                logger.warning("[small] reason fill failed for %d statements: %s", len(chunk), exc)
+
+    @staticmethod
+    def _coerce_reason_results(data: Any, expected: int) -> list[str]:
+        if isinstance(data, dict):
+            wrapped = data.get("results") or data.get("items")
+            if isinstance(wrapped, list):
+                values = []
+                for item in wrapped:
+                    if isinstance(item, dict):
+                        values.append(str(item.get("reason", "")).strip())
+                if values:
+                    return values[:expected]
+
+            numeric_keys = [key for key in data.keys() if str(key).isdigit()]
+            if numeric_keys:
+                return [
+                    str(data[key].get("reason", "")).strip()
+                    for key in sorted(numeric_keys, key=lambda value: int(value))
+                    if isinstance(data[key], dict)
+                ][:expected]
+
+        if isinstance(data, list):
+            return [
+                str(item.get("reason", "")).strip()
+                for item in data
+                if isinstance(item, dict)
+            ][:expected]
         return []
 
     # ── Examine phase: receiving answer key ────────────────────────────────

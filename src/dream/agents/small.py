@@ -65,21 +65,19 @@ Respond ONLY with a JSON array of strings."""
             return []
 
         results: list[dict[str, Any]] = []
-        chunk_size = 12
+        chunk_size = 4
 
         for idx in range(0, len(statements), chunk_size):
             chunk = statements[idx: idx + chunk_size]
             prompt = f"""Topic context: {topic}
 Verify each statement for factual accuracy.
-Return a JSON array with one object per statement in the same order.
+Respond ONLY with a JSON object in this exact shape:
+{{"results": [{{"id": 1, "score": 1.0, "flag": false, "reason": "short reason"}}]}}
+Return one result for each statement in the same order.
 
 Statements:
 {chr(10).join(f"{pos + 1}. {stmt}" for pos, stmt in enumerate(chunk))}
-
-Respond ONLY with JSON in this shape:
-[
-  {{"statement": "text", "score": 0.0, "reason": "short reason", "flag": false}}
-]"""
+"""
 
             try:
                 data = await self.generate_json(

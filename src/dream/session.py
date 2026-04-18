@@ -265,7 +265,7 @@ class DreamSession:
         }
         self.memory_store.set_memory("dream:last_summary", payload, category="dream")
         self.memory_store.upsert_knowledge(
-            key=f"dream:summary:{self._topic_digest()}",
+            key=f"dream:summary:{session_id}:{self._topic_digest()}",
             content=json.dumps(payload, indent=2),
             source="dream",
             category="dream_summary",
@@ -282,7 +282,7 @@ class DreamSession:
         for statement in statements:
             statement_digest = hashlib.sha1(statement.encode("utf-8")).hexdigest()[:16]
             self.memory_store.upsert_knowledge(
-                key=f"dream:knowledge:{topic_digest}:{statement_digest}",
+                key=f"dream:knowledge:{session_id}:{topic_digest}:{statement_digest}",
                 content=statement,
                 source="dream",
                 category="dream_knowledge",
@@ -305,7 +305,7 @@ class DreamSession:
             "knowledge_size": len(self.memory.knowledge_base),
         }
         self.memory_store.upsert_knowledge(
-            key=f"dream:cycle:{self._topic_digest()}:{cycle:06d}",
+            key=f"dream:cycle:{session_id}:{self._topic_digest()}:{cycle:06d}",
             content=json.dumps(payload, indent=2),
             source="dream",
             category="dream_cycle",

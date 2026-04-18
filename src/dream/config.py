@@ -3,8 +3,11 @@ dream/config.py — Model identifiers, endpoint config, and cycle parameters.
 Adjust model names to match your Ollama pull names exactly.
 """
 
+import os
 from dataclasses import dataclass, field
 from typing import Optional
+
+from config.config import DASHSCOPE_BASE_URL, DEFAULT_MODEL, LOCAL_API_KEY, LOCAL_BASE_URL
 
 
 @dataclass
@@ -23,24 +26,30 @@ class ModelConfig:
 class DreamConfig:
     # ── Model definitions ──────────────────────────────────────────────────
     cloud: ModelConfig = field(default_factory=lambda: ModelConfig(
-        name="qwen3:6-35b-a3b",
+        name=DEFAULT_MODEL,
         role="cloud-orchestrator",
+        base_url=DASHSCOPE_BASE_URL,
+        api_key=os.environ.get("DASHSCOPE_API_KEY") or os.environ.get("OPENAI_API_KEY"),
         temperature=0.6,
         max_tokens=4096,
         context_window=32768,
         timeout=300.0,
     ))
     medium: ModelConfig = field(default_factory=lambda: ModelConfig(
-        name="qwen3:5-4b",
+        name="qwen3.5:4b",
         role="medium-student",
+        base_url=LOCAL_BASE_URL,
+        api_key=LOCAL_API_KEY,
         temperature=0.7,
         max_tokens=2048,
         context_window=8192,
         timeout=120.0,
     ))
     small: ModelConfig = field(default_factory=lambda: ModelConfig(
-        name="qwen3:5-0.8b",
+        name="qwen3.5:0.8b",
         role="small-verifier",
+        base_url=LOCAL_BASE_URL,
+        api_key=LOCAL_API_KEY,
         temperature=0.3,       # low temp for grading / verification
         max_tokens=1024,
         context_window=4096,
@@ -59,6 +68,7 @@ class DreamConfig:
     checkpoint_every_n_cycles: int = 5
     memory_path: str = "dream_memory.json"
     log_path: str = "dream.log"
+    resume_existing: bool = False
 
     # ── VRAM guard ─────────────────────────────────────────────────────────
     # Seconds to wait between local model calls to avoid OOM on 8GB 5060

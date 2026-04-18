@@ -94,7 +94,11 @@ class DreamSession:
             SmallAgent(self.cfg.small) as small,
         ):
             # Initialise or resume memory
-            resumed = self.memory.load_or_init(self.topic, [])
+            resumed = self.memory.load_or_init(
+                self.topic,
+                [],
+                resume=self.cfg.resume_existing,
+            )
             if not resumed:
                 logger.info("[session] decomposing topic into subtopics...")
                 subtopics = await cloud.decompose_topic(self.topic, n=6)

@@ -27,6 +27,7 @@ def build_config(args: argparse.Namespace) -> DreamConfig:
     cfg.target_duration_hours = args.hours
     cfg.questions_per_test = args.questions
     cfg.memory_path = args.memory or f"dream_{args.topic[:30].replace(' ', '_')}.json"
+    cfg.resume_existing = args.resume
 
     if args.cloud_model:
         cfg.cloud.name = args.cloud_model

@@ -49,8 +49,9 @@ Respond ONLY with a JSON array of strings, no other text.
 Example: ["Statement one.", "Statement two.", ...]"""
 
         data = await self.generate_json(prompt)
-        if isinstance(data, list):
-            return [str(s) for s in data]
+        statements = self.coerce_string_list(data, "statements", "facts", "items")
+        if statements:
+            return statements
         logger.warning("[cloud] gather returned unexpected shape: %s", type(data))
         return []
 
@@ -68,8 +69,9 @@ Respond ONLY with a JSON array of short subtopic strings (max 8 words each).
 Example: ["Subtopic 1", "Subtopic 2", ...]"""
 
         data = await self.generate_json(prompt)
-        if isinstance(data, list):
-            return [str(s) for s in data[:n]]
+        subtopics = self.coerce_string_list(data, "subtopics", "topics", "items")
+        if subtopics:
+            return subtopics[:n]
         return [topic]
 
     # ── Examine phase: test creation ───────────────────────────────────────
@@ -152,7 +154,7 @@ Example: ["concept A", "concept B"]"""
 
         try:
             data = await self.generate_json(prompt)
-            return list(data) if isinstance(data, list) else []
+            return self.coerce_string_list(data, "weak_areas", "subtopics", "gaps", "items")
         except Exception as exc:
             logger.warning("[cloud] gap analysis failed: %s", exc)
             return []

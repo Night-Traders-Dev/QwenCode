@@ -50,7 +50,7 @@ Example: ["Fact one.", "Fact two.", ...]"""
 
         try:
             data = await self.generate_json(prompt)
-            return [str(s) for s in data] if isinstance(data, list) else []
+            return self.coerce_string_list(data, "statements", "facts", "items")
         except Exception as exc:
             logger.warning("[medium] gather failed: %s", exc)
             return []
@@ -135,7 +135,7 @@ Respond ONLY with a JSON array of strings."""
 
         try:
             data = await self.generate_json(prompt)
-            return [str(s) for s in data] if isinstance(data, list) else []
+            return self.coerce_string_list(data, "reflection", "gaps", "items", "statements")
         except Exception as exc:
             logger.warning("[medium] reflection failed: %s", exc)
             return []

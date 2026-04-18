@@ -1,5 +1,5 @@
 """
-dream/agents/small.py — Small local agent (Qwen3.5-0.8B + Megakernel).
+dream/agents/small.py — Small local agent (Qwen3.5-0.8B).
 
 Responsibilities:
   - Data legitimacy verification (verify phase)
@@ -44,7 +44,7 @@ Respond ONLY with a JSON array of strings."""
 
         try:
             data = await self.generate_json(prompt, temperature=0.4)
-            return [str(s) for s in data] if isinstance(data, list) else []
+            return self.coerce_string_list(data, "statements", "facts", "items")
         except Exception as exc:
             logger.warning("[small] gather failed: %s", exc)
             return []
@@ -165,7 +165,7 @@ Respond ONLY with a JSON array of strings."""
 
             try:
                 gaps = await self.generate_json(prompt, temperature=0.3, max_tokens=256)
-                concept_gaps = [str(g) for g in gaps] if isinstance(gaps, list) else []
+                concept_gaps = self.coerce_string_list(gaps, "concept_gaps", "gaps", "weak_areas")
             except Exception:
                 concept_gaps = []
         else:

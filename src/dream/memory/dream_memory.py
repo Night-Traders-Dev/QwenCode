@@ -48,12 +48,12 @@ class DreamMemory:
 
     # ── Persistence ────────────────────────────────────────────────────────
 
-    def load_or_init(self, topic: str, subtopics: list[str]) -> bool:
+    def load_or_init(self, topic: str, subtopics: list[str], resume: bool = False) -> bool:
         """
         Load existing memory for `topic` if present, otherwise initialise fresh.
         Returns True if prior state was loaded (session resume).
         """
-        if self._path.exists():
+        if resume and self._path.exists():
             try:
                 with self._path.open() as f:
                     data = json.load(f)
@@ -78,7 +78,10 @@ class DreamMemory:
             "topic_retry_count": 0,
             "session_best_score": 0.0,
         }
-        logger.info("[memory] initialised fresh for topic: %s", topic)
+        if self._path.exists() and not resume:
+            logger.info("[memory] starting fresh; existing file will be replaced on save: %s", self._path)
+        else:
+            logger.info("[memory] initialised fresh for topic: %s", topic)
         return False
 
     def save(self) -> None:

@@ -6,9 +6,12 @@ from typing import Optional
 from config.config import MAX_OUTPUT_CHARS
 from config.config import load_config
 from ui.rich_ui import console
-from ui.live_render import C
+from ui.live_render import C, build_semantic_renderable
+from rich import box
 from rich.markdown import Markdown
+from rich.panel import Panel
 from rich.syntax import Syntax
+from rich.text import Text
 
 
 # ── tool implementations ──────────────────────────────────────────────────────
@@ -296,11 +299,24 @@ def print_tool_call(name: str, args: dict):
 
 def print_tool_result(result: str, ok: bool = True):
     col   = C["ok"] if ok else C["err"]
+    semantic = build_semantic_renderable(result, title="Tool Result")
+    if semantic:
+        console.print(semantic)
+        return
+
     lines = result.strip().splitlines()
-    preview = "\n".join(lines[:6])
-    if len(lines) > 6:
-        preview += f"\n  [{C['dim']}]... ({len(lines)} lines total)[/]"
-    console.print(f"  [{col}]└─[/] [{C['dim']}]{preview}[/]")
+    preview = "\n".join(lines[:8])
+    if len(lines) > 8:
+        preview += f"\n... ({len(lines)} lines total)"
+    console.print(
+        Panel(
+            Text(preview or "(empty)", style=C["text"]),
+            title=f"[{col}]Tool Result[/]",
+            border_style=col,
+            box=box.ROUNDED,
+            padding=(0, 1),
+        )
+    )
 
 def render_assistant(text: str):
     fence_re = re.compile(r"```(\w*)\n(.*?)```", re.DOTALL)

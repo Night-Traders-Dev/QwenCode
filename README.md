@@ -18,9 +18,10 @@ QwenCode is a terminal-first Qwen harness with a browser runner, a local helper 
 
 - **Home dashboard** on startup with `/home` and `/go <section>`
 - **Professional terminal rendering** with responsive status panels and structured answer views
-- **Semantic response rendering** for weather reports and improved markdown fallback
+- **Semantic response rendering** for weather reports, Dream summaries, knowledge hits, and improved markdown fallback
 - **Dream loop** with live progress UI, session summaries, and PostgreSQL sync
 - **Expanded toolset** for file reads, chunked file reads, shell, git, knowledge search, and Dream inspection
+- **Structured tool-result views** so diagnostics and memory hits land as UI instead of raw log text
 - **Warm local model path** while the cloud/browser model is working
 - **MegaKernel / Mirage submodule** vendored for future fast-path work
 
@@ -138,6 +139,8 @@ QwenCode no longer treats every answer as one generic markdown blob.
 
 - standard markdown answers render with a cleaner lead-summary + body layout
 - dense forecast-style answers can be recognized and rendered as a **weather report**
+- Dream and memory-style summaries can be rendered as **diagnostic dashboards**
+- knowledge search results can be rendered as **search tables**
 - the status panel is multi-row and width-aware instead of a single overflow line
 - browser-mode answers are shown as soon as the main response is ready, while the audit continues in the background
 
@@ -163,6 +166,16 @@ QwenCode will render:
 - an extended forecast table when enough daily structure is present
 
 This is handled in the UI renderer rather than by relying on the model to format perfectly.
+
+### Structured diagnostic rendering
+
+QwenCode also recognizes structured operational text such as:
+
+- Dream memory summaries
+- knowledge search results
+- compact label/value diagnostics
+
+Those are rendered into dashboard-style panels or tables so memory and tool output are easier to scan at a glance.
 
 ## Local model stack
 

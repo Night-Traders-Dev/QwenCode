@@ -65,6 +65,11 @@ def _extract_metric(pattern: str, text: str) -> str:
     return match.group(1).strip(" ,;") if match else ""
 
 
+def _extract_line_value(label: str, text: str) -> str:
+    match = re.search(rf"^{re.escape(label)}:\s*(.+)$", text, re.MULTILINE)
+    return match.group(1).strip() if match else ""
+
+
 def _clean_weather_value(value: str) -> str:
     cleaned = (value or "").strip()
     cleaned = re.sub(r"^[\s:;,-]+", "", cleaned)
@@ -304,15 +309,252 @@ def _render_weather_response(title: str, weather: dict) -> Group:
     return Group(*blocks)
 
 
+def _parse_dream_report(text: str) -> dict | None:
+    topic = _extract_line_value("Topic", text)
+    knowledge = _extract_line_value("Knowledge statements", text)
+    best_score = _extract_line_value("Best score", text)
+    subtopics_raw = _extract_line_value("Subtopics", text)
+    weak_raw = _extract_line_value("Weak areas", text)
+    flagged = _extract_line_value("Flagged statements", text)
+    if not topic or not (knowledge or best_score or "Recent cycles:" in text):
+        return None
+
+    cycle_pattern = re.compile(
+        r"^\s*cycle\s+(\d+):\s*score=([0-9.]+%)\s+passed=(True|False)\s+added=(\d+)",
+        re.MULTILINE,
+    )
+    cycles = [
+        {
+            "cycle": match.group(1),
+            "score": match.group(2),
+            "passed": match.group(3),
+            "added": match.group(4),
+        }
+        for match in cycle_pattern.finditer(text)
+    ]
+
+    subtopics = [] if not subtopics_raw or subtopics_raw == "(none)" else [part.strip() for part in subtopics_raw.split(",") if part.strip()]
+    weak_areas = [] if not weak_raw or weak_raw == "(none)" else [part.strip() for part in weak_raw.split(",") if part.strip()]
+
+    return {
+        "topic": topic,
+        "knowledge": knowledge or "0",
+        "flagged": flagged or "0",
+        "best_score": best_score or "0.0%",
+        "subtopics": subtopics,
+        "weak_areas": weak_areas,
+        "cycles": cycles,
+    }
+
+
+def _render_dream_report(title: str, report: dict) -> Group:
+    blocks = [
+        Rule(title=f"[{C['brand']}]{title}[/]", style=C["brand"]),
+        Panel(
+            Group(
+                Text(report["topic"], style=f"bold {C['brand']}"),
+                Text(
+                    f"{len(report['subtopics'])} subtopics tracked"
+                    if report["subtopics"]
+                    else "No subtopics recorded yet",
+                    style=C["dim"],
+                ),
+            ),
+            border_style=C["brand"],
+            box=box.ROUNDED,
+            padding=(0, 1),
+        ),
+    ]
+
+    metric_cards = []
+    for label, value, color in [
+        ("Knowledge", report.get("knowledge"), C["code"]),
+        ("Flagged", report.get("flagged"), C["warn"]),
+        ("Best Score", report.get("best_score"), C["ok"]),
+        ("Cycles", str(len(report.get("cycles") or [])), C["accent"]),
+    ]:
+        metric_cards.append(
+            Panel(
+                Text.assemble((label + "\n", C["dim"]), (value, color)),
+                border_style=C["dim"],
+                box=box.ROUNDED,
+                padding=(0, 1),
+            )
+        )
+    blocks.append(Columns(metric_cards, expand=True, equal=True))
+
+    detail_panels = []
+    if report.get("subtopics"):
+        detail_panels.append(
+            Panel(
+                Text("\n".join(f"- {item}" for item in report["subtopics"]), style=C["text"]),
+                title=f"[{C['accent']}]Subtopics[/]",
+                border_style=C["accent"],
+                box=box.ROUNDED,
+                padding=(0, 1),
+            )
+        )
+    if report.get("weak_areas"):
+        detail_panels.append(
+            Panel(
+                Text("\n".join(f"- {item}" for item in report["weak_areas"]), style=C["text"]),
+                title=f"[{C['warn']}]Weak Areas[/]",
+                border_style=C["warn"],
+                box=box.ROUNDED,
+                padding=(0, 1),
+            )
+        )
+    elif detail_panels:
+        detail_panels.append(
+            Panel(
+                Text("No weak areas recorded.", style=C["dim"]),
+                title=f"[{C['ok']}]Weak Areas[/]",
+                border_style=C["ok"],
+                box=box.ROUNDED,
+                padding=(0, 1),
+            )
+        )
+    if detail_panels:
+        blocks.append(Columns(detail_panels, expand=True, equal=True))
+
+    if report.get("cycles"):
+        table = Table(box=box.SIMPLE, show_header=True, header_style=C["brand"], expand=True)
+        table.add_column("Cycle", style=C["accent"], justify="right", no_wrap=True)
+        table.add_column("Score", style=C["ok"], justify="right", no_wrap=True)
+        table.add_column("Passed", style=C["text"], no_wrap=True)
+        table.add_column("Added", style=C["code"], justify="right", no_wrap=True)
+        for cycle in report["cycles"]:
+            passed_color = C["ok"] if cycle["passed"] == "True" else C["warn"]
+            table.add_row(
+                cycle["cycle"],
+                cycle["score"],
+                f"[{passed_color}]{cycle['passed']}[/]",
+                cycle["added"],
+            )
+        blocks.append(
+            Panel(
+                table,
+                title=f"[{C['tool']}]Recent Cycles[/]",
+                border_style=C["tool"],
+                box=box.ROUNDED,
+                padding=(0, 1),
+            )
+        )
+
+    return Group(*blocks)
+
+
+def _parse_knowledge_search(text: str) -> dict | None:
+    lines = text.splitlines()
+    if not lines or not lines[0].strip().lower().startswith("backend:"):
+        return None
+
+    backend = lines[0].split(":", 1)[1].strip() if ":" in lines[0] else "unknown"
+    rows = []
+    current = None
+    entry_re = re.compile(r"^-\s+(.+?)\s+\[([^\]]+)\]\s*$")
+    for raw_line in lines[1:]:
+        line = raw_line.rstrip()
+        if not line.strip():
+            continue
+        match = entry_re.match(line.strip())
+        if match:
+            if current:
+                rows.append(current)
+            current = {
+                "key": match.group(1).strip(),
+                "category": match.group(2).strip(),
+                "preview": "",
+            }
+            continue
+        if current is not None:
+            current["preview"] = (current["preview"] + " " + line.strip()).strip()
+
+    if current:
+        rows.append(current)
+    if not rows:
+        return None
+    return {"backend": backend, "rows": rows}
+
+
+def _render_knowledge_search(title: str, result: dict) -> Group:
+    table = Table(box=box.SIMPLE, show_header=True, header_style=C["brand"], expand=True)
+    table.add_column("Key", style=C["accent"], overflow="fold")
+    table.add_column("Category", style=C["tool"], no_wrap=True)
+    table.add_column("Preview", style=C["text"], overflow="fold")
+    for row in result["rows"]:
+        table.add_row(row["key"], row["category"], row["preview"] or "No preview available")
+
+    return Group(
+        Rule(title=f"[{C['brand']}]{title}[/]", style=C["brand"]),
+        Text(f"Knowledge backend: {result['backend']}", style=C["dim"]),
+        Panel(
+            table,
+            border_style=C["tool"],
+            box=box.ROUNDED,
+            padding=(0, 1),
+        ),
+    )
+
+
+def _parse_fact_sheet(text: str) -> list[tuple[str, str]] | None:
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    if not 3 <= len(lines) <= 10:
+        return None
+
+    pairs = []
+    for line in lines:
+        if line.startswith(("```", "- ", "* ")):
+            return None
+        match = re.match(r"^([A-Za-z][A-Za-z0-9 /()._-]{1,24}):\s+(.+)$", line)
+        if not match:
+            return None
+        key, value = match.groups()
+        pairs.append((key.strip(), value.strip()))
+
+    return pairs if len(pairs) >= 3 else None
+
+
+def _render_fact_sheet(title: str, pairs: list[tuple[str, str]]) -> Group:
+    table = Table(box=box.SIMPLE, show_header=False, expand=True, padding=(0, 1))
+    table.add_column(style=C["accent"], no_wrap=True)
+    table.add_column(style=C["text"], overflow="fold")
+    for key, value in pairs:
+        table.add_row(key, value)
+
+    return Group(
+        Rule(title=f"[{C['brand']}]{title}[/]", style=C["brand"]),
+        Panel(
+            table,
+            border_style=C["brand"],
+            box=box.ROUNDED,
+            padding=(0, 1),
+        ),
+    )
+
+
+def build_semantic_renderable(text: str, title: str = "Response"):
+    for parser, renderer in [
+        (_parse_weather_report, _render_weather_response),
+        (_parse_dream_report, _render_dream_report),
+        (_parse_knowledge_search, _render_knowledge_search),
+        (_parse_fact_sheet, _render_fact_sheet),
+    ]:
+        parsed = parser(text)
+        if parsed:
+            return renderer(title, parsed)
+    return None
+
+
 def render_response(text: str, title: str = "Response"):
     """Render assistant output in a readable, width-aware layout."""
     cleaned = normalize_markdown(text)
     if not cleaned:
         return
 
-    weather = _parse_weather_report(text)
-    if weather:
-        console.print(_render_weather_response(title, weather))
+    semantic = build_semantic_renderable(text, title=title)
+    if semantic:
+        console.print(semantic)
         return
 
     paragraphs = [part.strip() for part in cleaned.split("\n\n") if part.strip()]

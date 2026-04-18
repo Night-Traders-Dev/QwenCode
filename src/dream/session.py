@@ -29,6 +29,8 @@ from dream.phases import (
     phase_gather,
     phase_verify,
 )
+from ui.live_render import C
+from ui.dream_ui import DreamLiveUI
 
 try:
     from memory.store import MemoryStore
@@ -38,15 +40,16 @@ except Exception:
 logger = logging.getLogger("dream.session")
 
 
-def _configure_logging(log_path: str) -> None:
+def _configure_logging(log_path: str, stream: bool = True) -> None:
     fmt = "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s"
+    handlers: list[logging.Handler] = [logging.FileHandler(log_path, mode="a")]
+    if stream:
+        handlers.insert(0, logging.StreamHandler())
     logging.basicConfig(
         level=logging.INFO,
         format=fmt,
-        handlers=[
-            logging.StreamHandler(),
-            logging.FileHandler(log_path, mode="a"),
-        ],
+        handlers=handlers,
+        force=True,
     )
 
 
@@ -75,6 +78,7 @@ class DreamSession:
         self._stop_flag = False
         self._cycle = 0
         self.memory_store = None
+        self.ui = DreamLiveUI(topic, self.cfg) if self.cfg.live_ui else None
 
         if MemoryStore is not None:
             try:
@@ -89,7 +93,7 @@ class DreamSession:
     # ── Entry point ────────────────────────────────────────────────────────
 
     async def run(self) -> None:
-        _configure_logging(self.cfg.log_path)
+        _configure_logging(self.cfg.log_path, stream=not self.cfg.live_ui)
 
         # Graceful shutdown on SIGTERM
         loop = asyncio.get_running_loop()
@@ -102,6 +106,12 @@ class DreamSession:
         logger.info("Models   : cloud=%s | medium=%s | small=%s",
                     self.cfg.cloud.name, self.cfg.medium.name, self.cfg.small.name)
         logger.info("=" * 60)
+        if self.ui:
+            self.ui.start()
+            self.ui.add_event("Dream session started.", C["brand"])
+            self.ui.add_event(f"Memory file: {self.cfg.memory_path}", C["dim"])
+            if self.memory_store is not None:
+                self.ui.set_backend(self.memory_store.get_status().get("backend", self.cfg.memory_backend))
 
         deadline = time.time() + self.cfg.target_duration_hours * 3600
         session_start = time.time()
@@ -119,11 +129,17 @@ class DreamSession:
             )
             if not resumed:
                 logger.info("[session] decomposing topic into subtopics...")
+                self._ui_set_phase("Gather", "running", "Decomposing topic into subtopics")
                 subtopics = await cloud.decompose_topic(self.topic, n=6)
                 self.memory.subtopics = subtopics
                 logger.info("[session] subtopics: %s", subtopics)
+                self._ui_complete_phase("Gather", f"Prepared {len(subtopics)} subtopics.")
             else:
                 logger.info("[session] resuming — subtopics: %s", self.memory.subtopics)
+                self._ui_add_event("Resumed from prior Dream memory.", C["tool"])
+
+            self._ui_set_subtopics(self.memory.subtopics)
+            self._ui_update_memory()
 
             self._persist_session_overview()
 
@@ -135,15 +151,19 @@ class DreamSession:
                     "\n── CYCLE %d │ %.2f hours remaining ─────────────────────────────",
                     self._cycle, remaining,
                 )
+                if self.ui:
+                    self.ui.start_cycle(self._cycle, remaining, self.memory)
 
                 try:
                     await self._run_cycle(cloud, medium, small)
                 except KeyboardInterrupt:
                     logger.info("[session] KeyboardInterrupt — stopping cleanly")
+                    self._ui_add_event("Stopped by keyboard interrupt.", C["warn"])
                     break
                 except Exception as exc:
                     logger.exception("[session] cycle %d crashed: %s", self._cycle, exc)
                     logger.info("[session] sleeping 10s before retry...")
+                    self._ui_fail_phase(self.ui.current_phase if self.ui else "Gather", f"Cycle {self._cycle} crashed: {exc}")
                     await asyncio.sleep(10)
                     continue
 
@@ -152,6 +172,7 @@ class DreamSession:
                     self.memory.save()
                     self._persist_session_overview()
                     logger.info("[session] checkpoint saved — cycle %d", self._cycle)
+                    self._ui_add_event(f"Checkpoint saved at cycle {self._cycle}.", C["brand"])
 
                 # Convergence check
                 if self.memory.is_converged():
@@ -159,6 +180,7 @@ class DreamSession:
                         "[session] CONVERGED after %d cycles — best score=%.1f%%",
                         self._cycle, self.memory.session_best_score * 100,
                     )
+                    self._ui_add_event("Convergence reached.", C["ok"])
                     break
 
                 # Retry limit check
@@ -167,6 +189,7 @@ class DreamSession:
                         "[session] retry limit reached (%d) — ending session",
                         self.cfg.max_topic_retries,
                     )
+                    self._ui_add_event("Retry limit reached.", C["warn"])
                     break
 
         # Final save and summary
@@ -183,6 +206,9 @@ class DreamSession:
         logger.info("Converged      : %s", summary["converged"])
         logger.info("=" * 60)
         self._persist_session_overview()
+        if self.ui:
+            self.ui.finish(summary, elapsed)
+            self.ui.stop()
         if self.memory_store is not None:
             self.memory_store.close()
 
@@ -200,16 +226,26 @@ class DreamSession:
         cfg = self.cfg
 
         # ── Phase 1: Gather ────────────────────────────────────────────────
+        self._ui_set_phase("Gather", "running", "Collecting candidate statements")
         raw_statements = await phase_gather(topic, memory, cloud, medium, small, cfg)
+        self._ui_complete_phase("Gather", f"Collected {len(raw_statements)} candidate statements.")
 
         # ── Phase 2: Verify ────────────────────────────────────────────────
         await asyncio.sleep(cfg.local_inference_cooldown)
+        self._ui_set_phase("Verify", "running", f"Fact-checking {len(raw_statements)} statements")
         _verified, _flagged = await phase_verify(topic, raw_statements, memory, small, cfg)
         self._persist_verified_statements(_verified)
+        self._ui_complete_phase("Verify", f"Verified {len(_verified)} and flagged {len(_flagged)}.")
+        self._ui_update_memory()
 
         # ── Phase 3: Examine ───────────────────────────────────────────────
         await asyncio.sleep(cfg.local_inference_cooldown)
+        self._ui_set_phase("Examine", "running", f"Testing {len(memory.knowledge_base)} verified facts")
         grade_report = await phase_examine(topic, cycle, memory, cloud, medium, small, cfg)
+        self._ui_complete_phase(
+            "Examine",
+            f"Scored {grade_report.get('score', 0.0) * 100:.1f}% on {grade_report.get('total', 0)} questions.",
+        )
 
         # ── Record cycle results ───────────────────────────────────────────
         memory.record_cycle(
@@ -222,8 +258,16 @@ class DreamSession:
         )
 
         # ── Phase 4: Adapt ─────────────────────────────────────────────────
+        self._ui_set_phase("Adapt", "running", "Updating curriculum and weak areas")
         await phase_adapt(topic, cycle, grade_report, memory, cloud, cfg)
         self._persist_cycle_report(cycle, grade_report)
+        adapt_detail = (
+            f"Passed cycle. Retry count {memory.topic_retry_count}/{cfg.max_topic_retries}."
+            if grade_report.get("passed")
+            else "Updated weak areas: " + (", ".join(memory.weak_areas[:3]) or "none")
+        )
+        self._ui_complete_phase("Adapt", adapt_detail)
+        self._ui_update_memory(grade_report)
 
         # ── Cycle summary ──────────────────────────────────────────────────
         scores = memory.recent_scores(3)
@@ -241,6 +285,7 @@ class DreamSession:
     def _request_stop(self) -> None:
         logger.info("[session] SIGTERM received — stopping after current cycle")
         self._stop_flag = True
+        self._ui_add_event("Received SIGTERM. Stopping after current cycle.", C["warn"])
 
     def _topic_digest(self) -> str:
         return hashlib.sha1(self.topic.encode("utf-8")).hexdigest()[:16]
@@ -312,3 +357,27 @@ class DreamSession:
             session_id=session_id,
             metadata={"topic": self.topic, "cycle": cycle, "kind": "cycle_report"},
         )
+
+    def _ui_set_subtopics(self, subtopics: list[str]) -> None:
+        if self.ui:
+            self.ui.set_subtopics(subtopics)
+
+    def _ui_set_phase(self, phase: str, state: str, detail: str = "") -> None:
+        if self.ui:
+            self.ui.set_phase(phase, state, detail)
+
+    def _ui_complete_phase(self, phase: str, detail: str = "") -> None:
+        if self.ui:
+            self.ui.complete_phase(phase, detail)
+
+    def _ui_fail_phase(self, phase: str, detail: str) -> None:
+        if self.ui:
+            self.ui.fail_phase(phase, detail)
+
+    def _ui_update_memory(self, grade_report: Optional[dict] = None) -> None:
+        if self.ui:
+            self.ui.update_memory(self.memory, grade_report=grade_report)
+
+    def _ui_add_event(self, text: str, color: str = C["dim"]) -> None:
+        if self.ui:
+            self.ui.add_event(text, color)

@@ -75,6 +75,7 @@ class DreamConfig:
     memory_path: str = "dream_memory.json"
     log_path: str = "dream.log"
     resume_existing: bool = False
+    live_ui: bool = True
     session_id: str = field(default_factory=lambda: os.environ.get("DREAM_SESSION_ID", "dream"))
     memory_backend: str = field(default_factory=lambda: load_config().get("memory_backend", "auto"))
     memory_db_url: Optional[str] = field(default_factory=lambda: load_config().get("memory_db_url") or None)

@@ -98,6 +98,7 @@ Questions:
                 prompt,
                 temperature=0.1,
                 max_tokens=max(128, len(questions) * 24),
+                response_format={"type": "json_object"},
             )
             answers: dict[str, str] = {}
             if isinstance(data, dict):

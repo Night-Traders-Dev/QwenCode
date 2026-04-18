@@ -82,15 +82,15 @@ Statements:
             try:
                 data = await self.generate_json(
                     prompt,
-                    temperature=0.2,
-                    max_tokens=1024,
+                    temperature=0.0,
+                    max_tokens=512,
+                    response_format={"type": "json_object"},
                 )
-                if isinstance(data, dict):
-                    data = data.get("results") or data.get("verifications") or data.get("items") or []
-                if not isinstance(data, list) or not data:
+                items = self._coerce_batch_results(data, len(chunk))
+                if not items:
                     raise ValueError("unexpected verification payload")
 
-                for stmt, item in zip(chunk, data):
+                for stmt, item in zip(chunk, items):
                     score = float((item or {}).get("score", 0.5))
                     flag = bool((item or {}).get("flag", score < 0.5))
                     results.append({
@@ -100,8 +100,8 @@ Statements:
                         "reason": str((item or {}).get("reason", "")),
                     })
 
-                if len(data) < len(chunk):
-                    for stmt in chunk[len(data):]:
+                if len(items) < len(chunk):
+                    for stmt in chunk[len(items):]:
                         results.append(await self._verify_one(stmt, topic))
             except Exception as exc:
                 logger.warning("[small] batch verify failed for %d statements: %s", len(chunk), exc)
@@ -140,6 +140,37 @@ Respond ONLY with a JSON object:
                 "flag": False,
                 "reason": "verification error",
             }
+
+    @staticmethod
+    def _coerce_batch_results(data: Any, expected: int) -> list[dict[str, Any]]:
+        if isinstance(data, list):
+            return [item for item in data if isinstance(item, dict)]
+
+        if isinstance(data, dict):
+            if all(key in data for key in ("score", "flag")):
+                return [data]
+
+            wrapped = data.get("results") or data.get("verifications") or data.get("items")
+            if isinstance(wrapped, list):
+                return [item for item in wrapped if isinstance(item, dict)]
+
+            numeric_keys = [key for key in data.keys() if str(key).isdigit()]
+            if numeric_keys:
+                ordered = []
+                for key in sorted(numeric_keys, key=lambda value: int(value)):
+                    value = data[key]
+                    if isinstance(value, dict):
+                        ordered.append(value)
+                    elif isinstance(value, bool):
+                        ordered.append({
+                            "score": 1.0 if value else 0.0,
+                            "flag": not value,
+                            "reason": "",
+                        })
+                if ordered:
+                    return ordered[:expected]
+
+        return []
 
     # ── Examine phase: receiving answer key ────────────────────────────────
 

@@ -28,6 +28,9 @@ def build_config(args: argparse.Namespace) -> DreamConfig:
     cfg.questions_per_test = args.questions
     cfg.memory_path = args.memory or f"dream_{args.topic[:30].replace(' ', '_')}.json"
     cfg.resume_existing = args.resume
+    cfg.live_ui = not args.plain
+    if args.session_id:
+        cfg.session_id = args.session_id
 
     if args.cloud_model:
         cfg.cloud.name = args.cloud_model
@@ -53,6 +56,8 @@ def main() -> None:
     parser.add_argument("--questions", type=int, default=10, help="Questions per test cycle")
     parser.add_argument("--memory", type=str, default=None, help="Path to memory JSON file")
     parser.add_argument("--resume", action="store_true", help="Resume from existing memory file")
+    parser.add_argument("--plain", action="store_true", help="Disable the live Dream UI")
+    parser.add_argument("--session-id", type=str, default=None, help="Memory session id for PostgreSQL sync")
 
     # Model overrides
     parser.add_argument("--cloud-model", type=str, default=None)
@@ -66,12 +71,16 @@ def main() -> None:
     args = parser.parse_args()
     cfg = build_config(args)
 
-    print(f"\n🌙  DREAM — {args.topic}")
-    print(f"    Duration : {args.hours}h")
-    print(f"    Cloud    : {cfg.cloud.name}")
-    print(f"    Medium   : {cfg.medium.name}")
-    print(f"    Small    : {cfg.small.name}")
-    print(f"    Memory   : {cfg.memory_path}\n")
+    if cfg.live_ui:
+        print()
+    else:
+        print(f"\nDREAM - {args.topic}")
+        print(f"  Duration : {args.hours}h")
+        print(f"  Cloud    : {cfg.cloud.name}")
+        print(f"  Medium   : {cfg.medium.name}")
+        print(f"  Small    : {cfg.small.name}")
+        print(f"  Memory   : {cfg.memory_path}")
+        print(f"  Session  : {cfg.session_id}\n")
 
     session = DreamSession(topic=args.topic, config=cfg)
     try:

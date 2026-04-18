@@ -51,6 +51,7 @@ class BaseAgent:
         *,
         temperature: float | None = None,
         max_tokens: int | None = None,
+        response_format: dict[str, Any] | None = None,
     ) -> str:
         """Generate plain text from the configured model."""
         client = await self._ensure_client()
@@ -66,6 +67,8 @@ class BaseAgent:
         reasoning_effort = self._reasoning_effort()
         if reasoning_effort:
             request_kwargs["reasoning_effort"] = reasoning_effort
+        if response_format is not None:
+            request_kwargs["response_format"] = response_format
 
         response = await client.chat.completions.create(**request_kwargs)
         message = response.choices[0].message if response.choices else None
@@ -84,6 +87,7 @@ class BaseAgent:
         *,
         temperature: float | None = None,
         max_tokens: int | None = None,
+        response_format: dict[str, Any] | None = None,
     ) -> Any:
         """Generate and parse JSON from the configured model."""
         repair_prompt = (
@@ -91,16 +95,26 @@ class BaseAgent:
             "Return valid JSON only. Do not include markdown fences, explanations, or commentary."
         )
         last_error: Exception | None = None
-        for candidate in (prompt, repair_prompt):
-            text = await self.generate(
-                candidate,
-                temperature=temperature,
-                max_tokens=max_tokens,
-            )
-            try:
-                return self._parse_json(text)
-            except Exception as exc:
-                last_error = exc
+        response_formats = [response_format] if response_format is not None else [None]
+        if response_format is not None:
+            response_formats.append(None)
+
+        for fmt in response_formats:
+            for candidate in (prompt, repair_prompt):
+                try:
+                    text = await self.generate(
+                        candidate,
+                        temperature=temperature,
+                        max_tokens=max_tokens,
+                        response_format=fmt,
+                    )
+                except Exception as exc:
+                    last_error = exc
+                    continue
+                try:
+                    return self._parse_json(text)
+                except Exception as exc:
+                    last_error = exc
         raise ValueError(f"Could not parse JSON response: {last_error}")
 
     async def _ensure_client(self) -> AsyncOpenAI:

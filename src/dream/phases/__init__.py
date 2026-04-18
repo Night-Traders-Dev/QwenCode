@@ -19,6 +19,11 @@ from dream.memory.dream_memory import DreamMemory
 logger = logging.getLogger("dream.phases")
 
 
+def _is_local_endpoint(base_url: str) -> bool:
+    lowered = (base_url or "").lower()
+    return "localhost:11434" in lowered or "127.0.0.1:11434" in lowered
+
+
 # ── Phase 1: Gather ────────────────────────────────────────────────────────
 
 async def phase_gather(
@@ -38,11 +43,16 @@ async def phase_gather(
     logger.info("[gather] starting — topic=%s, subtopics=%s", topic, memory.subtopics[:3])
     t0 = time.perf_counter()
 
-    # Cloud + medium gather in parallel (cloud is remote, no VRAM conflict)
-    cloud_task = asyncio.create_task(cloud.gather(topic, memory.subtopics))
-    medium_task = asyncio.create_task(medium.gather(topic, memory.subtopics))
-
-    cloud_stmts, medium_stmts = await asyncio.gather(cloud_task, medium_task)
+    # Only parallelize when the cloud lane is truly remote. If it has fallen back
+    # to a local endpoint, keep the local 4B calls serialized to avoid VRAM spikes.
+    if _is_local_endpoint(cfg.cloud.base_url):
+        cloud_stmts = await cloud.gather(topic, memory.subtopics)
+        await asyncio.sleep(cfg.local_inference_cooldown)
+        medium_stmts = await medium.gather(topic, memory.subtopics)
+    else:
+        cloud_task = asyncio.create_task(cloud.gather(topic, memory.subtopics))
+        medium_task = asyncio.create_task(medium.gather(topic, memory.subtopics))
+        cloud_stmts, medium_stmts = await asyncio.gather(cloud_task, medium_task)
 
     # Small runs after medium to avoid OOM spike on shared 8GB
     await asyncio.sleep(cfg.local_inference_cooldown)

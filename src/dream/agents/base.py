@@ -81,6 +81,14 @@ class BaseAgent:
             return str(reasoning).strip()
         raise RuntimeError(f"{self.__class__.__name__} returned empty content")
 
+    async def probe(self) -> str:
+        """Run a tiny request to confirm the configured backend is usable."""
+        return await self.generate(
+            "Reply with READY only.",
+            temperature=0.0,
+            max_tokens=8,
+        )
+
     async def generate_json(
         self,
         prompt: str,

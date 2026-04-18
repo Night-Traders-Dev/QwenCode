@@ -20,6 +20,7 @@ QwenCode is a terminal-first Qwen harness with a browser runner, a local helper 
 - **Professional terminal rendering** with responsive status panels and structured answer views
 - **Semantic response rendering** for weather reports, Dream summaries, knowledge hits, and improved markdown fallback
 - **Dream loop** with live progress UI, session summaries, and PostgreSQL sync
+- **Dream cloud fallback** to the local 4B lane when the remote orchestrator is unavailable or misconfigured
 - **Expanded toolset** for file reads, chunked file reads, shell, git, knowledge search, and Dream inspection
 - **Structured tool-result views** so diagnostics and memory hits land as UI instead of raw log text
 - **Warm local model path** while the cloud/browser model is working
@@ -194,6 +195,7 @@ QwenCode uses a three-lane local/cloud setup:
 - gate easy answers quickly
 - escalate to deeper local auditing only when needed
 - support Dream verification and grading
+- take over the Dream orchestrator role if the configured cloud key or endpoint fails
 
 ### MegaKernel / Mirage
 
@@ -261,6 +263,8 @@ Dream is the multi-agent training loop:
 ```bash
 python src/run_dream.py "basic arithmetic"
 ```
+
+If the configured cloud model cannot authenticate, Dream now probes the local 4B lane and automatically falls back to it for orchestration instead of crashing with a traceback.
 
 ### Run Dream without the live board
 

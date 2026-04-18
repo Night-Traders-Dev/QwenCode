@@ -21,7 +21,7 @@ from typing import Optional
 from dream.agents.cloud import CloudAgent
 from dream.agents.medium import MediumAgent
 from dream.agents.small import SmallAgent
-from dream.config import DreamConfig
+from dream.config import DreamConfig, ModelConfig
 from dream.memory.dream_memory import DreamMemory
 from dream.phases import (
     phase_adapt,
@@ -98,119 +98,132 @@ class DreamSession:
         # Graceful shutdown on SIGTERM
         loop = asyncio.get_running_loop()
         loop.add_signal_handler(signal.SIGTERM, self._request_stop)
-
-        logger.info("=" * 60)
-        logger.info("DREAM SESSION START")
-        logger.info("Topic    : %s", self.topic)
-        logger.info("Duration : %.1f hours", self.cfg.target_duration_hours)
-        logger.info("Models   : cloud=%s | medium=%s | small=%s",
-                    self.cfg.cloud.name, self.cfg.medium.name, self.cfg.small.name)
-        logger.info("=" * 60)
-        if self.ui:
-            self.ui.start()
-            self.ui.add_event("Dream session started.", C["brand"])
-            self.ui.add_event(f"Memory file: {self.cfg.memory_path}", C["dim"])
-            if self.memory_store is not None:
-                self.ui.set_backend(self.memory_store.get_status().get("backend", self.cfg.memory_backend))
-
-        deadline = time.time() + self.cfg.target_duration_hours * 3600
         session_start = time.time()
+        try:
+            if self.ui:
+                self.ui.start()
+                self.ui.add_event("Dream session started.", C["brand"])
+                self.ui.add_event(f"Memory file: {self.cfg.memory_path}", C["dim"])
+                if self.memory_store is not None:
+                    self.ui.set_backend(self.memory_store.get_status().get("backend", self.cfg.memory_backend))
 
-        async with (
-            CloudAgent(self.cfg.cloud) as cloud,
-            MediumAgent(self.cfg.medium) as medium,
-            SmallAgent(self.cfg.small) as small,
-        ):
-            # Initialise or resume memory
-            resumed = self.memory.load_or_init(
-                self.topic,
-                [],
-                resume=self.cfg.resume_existing,
-            )
-            if not resumed:
-                logger.info("[session] decomposing topic into subtopics...")
-                self._ui_set_phase("Gather", "running", "Decomposing topic into subtopics")
-                subtopics = await cloud.decompose_topic(self.topic, n=6)
-                self.memory.subtopics = subtopics
-                logger.info("[session] subtopics: %s", subtopics)
-                self._ui_complete_phase("Gather", f"Prepared {len(subtopics)} subtopics.")
-            else:
-                logger.info("[session] resuming — subtopics: %s", self.memory.subtopics)
-                self._ui_add_event("Resumed from prior Dream memory.", C["tool"])
+            await self._prepare_cloud_lane()
 
-            self._ui_set_subtopics(self.memory.subtopics)
-            self._ui_update_memory()
+            logger.info("=" * 60)
+            logger.info("DREAM SESSION START")
+            logger.info("Topic    : %s", self.topic)
+            logger.info("Duration : %.1f hours", self.cfg.target_duration_hours)
+            logger.info("Models   : cloud=%s | medium=%s | small=%s",
+                        self.cfg.cloud.name, self.cfg.medium.name, self.cfg.small.name)
+            logger.info("=" * 60)
 
-            self._persist_session_overview()
+            deadline = time.time() + self.cfg.target_duration_hours * 3600
 
-            # Main cycle loop
-            while not self._stop_flag and time.time() < deadline:
-                self._cycle += 1
-                remaining = (deadline - time.time()) / 3600
-                logger.info(
-                    "\n── CYCLE %d │ %.2f hours remaining ─────────────────────────────",
-                    self._cycle, remaining,
+            async with (
+                CloudAgent(self.cfg.cloud) as cloud,
+                MediumAgent(self.cfg.medium) as medium,
+                SmallAgent(self.cfg.small) as small,
+            ):
+                # Initialise or resume memory
+                resumed = self.memory.load_or_init(
+                    self.topic,
+                    [],
+                    resume=self.cfg.resume_existing,
                 )
-                if self.ui:
-                    self.ui.start_cycle(self._cycle, remaining, self.memory)
+                if not resumed:
+                    logger.info("[session] decomposing topic into subtopics...")
+                    self._ui_set_phase("Gather", "running", "Decomposing topic into subtopics")
+                    subtopics = await cloud.decompose_topic(self.topic, n=6)
+                    self.memory.subtopics = subtopics
+                    logger.info("[session] subtopics: %s", subtopics)
+                    self._ui_complete_phase("Gather", f"Prepared {len(subtopics)} subtopics.")
+                else:
+                    logger.info("[session] resuming — subtopics: %s", self.memory.subtopics)
+                    self._ui_add_event("Resumed from prior Dream memory.", C["tool"])
 
-                try:
-                    await self._run_cycle(cloud, medium, small)
-                except KeyboardInterrupt:
-                    logger.info("[session] KeyboardInterrupt — stopping cleanly")
-                    self._ui_add_event("Stopped by keyboard interrupt.", C["warn"])
-                    break
-                except Exception as exc:
-                    logger.exception("[session] cycle %d crashed: %s", self._cycle, exc)
-                    logger.info("[session] sleeping 10s before retry...")
-                    self._ui_fail_phase(self.ui.current_phase if self.ui else "Gather", f"Cycle {self._cycle} crashed: {exc}")
-                    await asyncio.sleep(10)
-                    continue
+                self._ui_set_subtopics(self.memory.subtopics)
+                self._ui_update_memory()
 
-                # Checkpoint
-                if self._cycle % self.cfg.checkpoint_every_n_cycles == 0:
-                    self.memory.save()
-                    self._persist_session_overview()
-                    logger.info("[session] checkpoint saved — cycle %d", self._cycle)
-                    self._ui_add_event(f"Checkpoint saved at cycle {self._cycle}.", C["brand"])
+                self._persist_session_overview()
 
-                # Convergence check
-                if self.memory.is_converged():
+                # Main cycle loop
+                while not self._stop_flag and time.time() < deadline:
+                    self._cycle += 1
+                    remaining = (deadline - time.time()) / 3600
                     logger.info(
-                        "[session] CONVERGED after %d cycles — best score=%.1f%%",
-                        self._cycle, self.memory.session_best_score * 100,
+                        "\n── CYCLE %d │ %.2f hours remaining ─────────────────────────────",
+                        self._cycle, remaining,
                     )
-                    self._ui_add_event("Convergence reached.", C["ok"])
-                    break
+                    if self.ui:
+                        self.ui.start_cycle(self._cycle, remaining, self.memory)
 
-                # Retry limit check
-                if self.memory.topic_retry_count >= self.cfg.max_topic_retries:
-                    logger.info(
-                        "[session] retry limit reached (%d) — ending session",
-                        self.cfg.max_topic_retries,
-                    )
-                    self._ui_add_event("Retry limit reached.", C["warn"])
-                    break
+                    try:
+                        await self._run_cycle(cloud, medium, small)
+                    except KeyboardInterrupt:
+                        logger.info("[session] KeyboardInterrupt — stopping cleanly")
+                        self._ui_add_event("Stopped by keyboard interrupt.", C["warn"])
+                        break
+                    except Exception as exc:
+                        logger.exception("[session] cycle %d crashed: %s", self._cycle, exc)
+                        logger.info("[session] sleeping 10s before retry...")
+                        self._ui_fail_phase(
+                            self.ui.current_phase if self.ui else "Gather",
+                            f"Cycle {self._cycle} crashed: {self._summarize_exception(exc)}",
+                        )
+                        await asyncio.sleep(10)
+                        continue
 
-        # Final save and summary
-        self.memory.save()
-        elapsed = (time.time() - session_start) / 3600
-        summary = self.memory.summary()
-        logger.info("\n%s", "=" * 60)
-        logger.info("DREAM SESSION COMPLETE")
-        logger.info("Elapsed        : %.2f hours", elapsed)
-        logger.info("Cycles         : %d", self._cycle)
-        logger.info("Knowledge base : %d statements", summary["knowledge_statements"])
-        logger.info("Best score     : %.1f%%", summary["best_score"] * 100)
-        logger.info("Recent scores  : %s", [f"{s:.1%}" for s in summary["recent_scores"]])
-        logger.info("Converged      : %s", summary["converged"])
-        logger.info("=" * 60)
-        self._persist_session_overview()
-        if self.ui:
-            self.ui.finish(summary, elapsed)
-            self.ui.stop()
-        if self.memory_store is not None:
-            self.memory_store.close()
+                    # Checkpoint
+                    if self._cycle % self.cfg.checkpoint_every_n_cycles == 0:
+                        self.memory.save()
+                        self._persist_session_overview()
+                        logger.info("[session] checkpoint saved — cycle %d", self._cycle)
+                        self._ui_add_event(f"Checkpoint saved at cycle {self._cycle}.", C["brand"])
+
+                    # Convergence check
+                    if self.memory.is_converged():
+                        logger.info(
+                            "[session] CONVERGED after %d cycles — best score=%.1f%%",
+                            self._cycle, self.memory.session_best_score * 100,
+                        )
+                        self._ui_add_event("Convergence reached.", C["ok"])
+                        break
+
+                    # Retry limit check
+                    if self.memory.topic_retry_count >= self.cfg.max_topic_retries:
+                        logger.info(
+                            "[session] retry limit reached (%d) — ending session",
+                            self.cfg.max_topic_retries,
+                        )
+                        self._ui_add_event("Retry limit reached.", C["warn"])
+                        break
+
+            # Final save and summary
+            self.memory.save()
+            elapsed = (time.time() - session_start) / 3600
+            summary = self.memory.summary()
+            logger.info("\n%s", "=" * 60)
+            logger.info("DREAM SESSION COMPLETE")
+            logger.info("Elapsed        : %.2f hours", elapsed)
+            logger.info("Cycles         : %d", self._cycle)
+            logger.info("Knowledge base : %d statements", summary["knowledge_statements"])
+            logger.info("Best score     : %.1f%%", summary["best_score"] * 100)
+            logger.info("Recent scores  : %s", [f"{s:.1%}" for s in summary["recent_scores"]])
+            logger.info("Converged      : %s", summary["converged"])
+            logger.info("=" * 60)
+            self._persist_session_overview()
+            if self.ui:
+                self.ui.finish(summary, elapsed)
+        except Exception as exc:
+            message = self._summarize_exception(exc)
+            logger.error("[session] Dream failed: %s", message)
+            self._ui_fail_phase(self.ui.current_phase if self.ui else "Gather", message)
+            raise RuntimeError(message) from exc
+        finally:
+            if self.ui:
+                self.ui.stop()
+            if self.memory_store is not None:
+                self.memory_store.close()
 
     # ── Single cycle ───────────────────────────────────────────────────────
 
@@ -286,6 +299,76 @@ class DreamSession:
         logger.info("[session] SIGTERM received — stopping after current cycle")
         self._stop_flag = True
         self._ui_add_event("Received SIGTERM. Stopping after current cycle.", C["warn"])
+
+    async def _prepare_cloud_lane(self) -> None:
+        try:
+            async with CloudAgent(self.cfg.cloud) as probe:
+                await probe.probe()
+            return
+        except Exception as exc:
+            primary_error = exc
+
+        fallback_cfg = self._build_local_cloud_fallback()
+        if fallback_cfg is None:
+            raise RuntimeError(
+                "Dream cloud orchestrator is unavailable and no local fallback is configured. "
+                f"Details: {self._summarize_exception(primary_error)}"
+            ) from primary_error
+
+        try:
+            async with CloudAgent(fallback_cfg) as probe:
+                await probe.probe()
+        except Exception as fallback_exc:
+            raise RuntimeError(
+                "Dream cloud orchestrator is unavailable, and the local fallback could not start. "
+                f"Cloud error: {self._summarize_exception(primary_error)}. "
+                f"Fallback error: {self._summarize_exception(fallback_exc)}"
+            ) from fallback_exc
+
+        logger.warning(
+            "[session] cloud lane unavailable (%s); using local fallback %s via %s",
+            self._summarize_exception(primary_error),
+            fallback_cfg.name,
+            fallback_cfg.base_url,
+        )
+        self.cfg.cloud = fallback_cfg
+        self._ui_add_event(
+            f"Cloud lane unavailable; using local fallback {fallback_cfg.name}.",
+            C["warn"],
+        )
+
+    def _build_local_cloud_fallback(self) -> Optional[ModelConfig]:
+        medium = self.cfg.medium
+        cloud = self.cfg.cloud
+        same_model = (cloud.name or "").strip() == (medium.name or "").strip()
+        same_base = (cloud.base_url or "").rstrip("/") == (medium.base_url or "").rstrip("/")
+        if same_model and same_base:
+            return None
+
+        return ModelConfig(
+            name=medium.name,
+            role="cloud-orchestrator-fallback",
+            base_url=medium.base_url,
+            api_key=medium.api_key,
+            temperature=cloud.temperature,
+            max_tokens=max(cloud.max_tokens, medium.max_tokens),
+            context_window=medium.context_window,
+            timeout=max(cloud.timeout, medium.timeout),
+        )
+
+    @staticmethod
+    def _summarize_exception(exc: Exception) -> str:
+        text = " ".join(str(exc).split()).strip()
+        lowered = text.lower()
+        if "incorrect api key" in lowered or "invalid_api_key" in lowered:
+            return "incorrect or invalid cloud API key"
+        if "401" in lowered and "api key" in lowered:
+            return "cloud authentication failed (401)"
+        if "connection" in lowered and "refused" in lowered:
+            return "connection refused"
+        if len(text) > 220:
+            return text[:217] + "..."
+        return text or exc.__class__.__name__
 
     def _topic_digest(self) -> str:
         return hashlib.sha1(self.topic.encode("utf-8")).hexdigest()[:16]

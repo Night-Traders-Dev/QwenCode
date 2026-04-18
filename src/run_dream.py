@@ -88,6 +88,9 @@ def main() -> None:
     except KeyboardInterrupt:
         print("\n\nStopped. Progress saved.")
         sys.exit(0)
+    except Exception as exc:
+        print(f"\nDream failed: {exc}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":

@@ -1,6 +1,7 @@
 from pathlib import Path
 import json
 import os
+import re
 
 # ── constants ─────────────────────────────────────────────────────────────────
 CLAUDE_OPUS_MODEL="hf.co/ermiaazarkhalili/LFM2.5-1.2B-SFT-Claude-Opus-Reasoning-Unsloth-GGUF:Q8_0"
@@ -29,7 +30,6 @@ def get_model_display_name(model_id: str) -> str:
             if ":" in model_name:
                 name_part, quant = model_name.rsplit(":", 1)
                 # Extract size pattern like 1.2B, 4B, 0.8B, etc.
-                import re
                 size_match = re.search(r'(\d+\.?\d*[BKMG])', name_part, re.IGNORECASE)
                 size = size_match.group(1) if size_match else ""
 

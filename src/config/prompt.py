@@ -11,6 +11,7 @@ from rich.table import Table
 from rich.panel import Panel
 from rich.box import SIMPLE
 from config.config import HISTORY_FILE, save_config, LOCAL_MODEL
+from dream.context import wrap_user_with_runtime_context
 from tools.definitions import TOOLS
 from ui.home import HOME_SECTIONS, print_home_dashboard, print_home_section
 from ui.rich_ui import console
@@ -213,8 +214,18 @@ def handle_slash(
             elif arg:
                 console.print(f"\n[{C['brand']}]Local LLM ({local_llm.model}):[/]")
                 try:
+                    local_prompt = wrap_user_with_runtime_context(
+                        arg,
+                        cfg=cfg,
+                        memory_store=memory_store,
+                        mode="local",
+                    )
                     response = local_llm.chat_complete([
-                        {"role": "user", "content": arg}
+                        {
+                            "role": "system",
+                            "content": "You are the local QwenCode helper. Use the supplied QwenCode runtime context, including Dream system details, when it is relevant.",
+                        },
+                        {"role": "user", "content": local_prompt},
                     ])
                     console.print(response)
                 except Exception as e:

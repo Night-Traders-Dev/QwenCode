@@ -74,10 +74,16 @@ from tools.api import agentic_turn_api
 from config.config import MISSING, HISTORY_FILE, LOCAL_BASE_URL, LOCAL_API_KEY, load_config, save_config, BROWSER_DATA_DIR, MAX_TOOL_ITERS
 from config.prompt import build_prompt_session, get_input, handle_slash
 from browser.session import browser_session
+from dream.context import build_runtime_system_prompt
 from ui.home import print_home_dashboard
 from ui.rich_ui import console
 from ui.live_render import C
 from ui.banner import print_banner
+
+try:
+    from memory.store import MemoryStore
+except Exception:
+    MemoryStore = None
 
 
 # ── dependency check ──────────────────────────────────────────────────────────
@@ -112,7 +118,7 @@ except ImportError:
 
 
 
-SYSTEM_PROMPT = """
+BASE_SYSTEM_PROMPT = """
 You are Qwen Coder, an expert AI software engineer running inside a terminal.
 You have access to tools that let you read and write files, run shell commands,
 search for text, and list directories on the user's machine.
@@ -239,11 +245,35 @@ def main():
         sys.exit(1)
 
     client   = make_client(cfg)
-    messages: list = [{"role": "system", "content": SYSTEM_PROMPT}]
+    memory_store = None
+    memory_status = None
+    if MemoryStore is not None:
+        try:
+            memory_store = MemoryStore(
+                db_url=cfg.get("memory_db_url") or None,
+                backend=cfg.get("memory_backend", "auto"),
+                require_postgres=cfg.get("require_postgres", False),
+            )
+            memory_status = memory_store.get_status()
+            memory_store.get_or_create_session(
+                cfg.get("session_id", "default"),
+                model_main=cfg.get("model"),
+            )
+        except Exception as e:
+            console.print(f"[{C['warn']}]Memory store init failed: {e}[/]")
+            memory_store = None
+            memory_status = None
+
+    messages: list = []
     session  = build_prompt_session()
 
     print_banner(cfg)
-    print_home_dashboard(cfg, mode="api")
+    print_home_dashboard(
+        cfg,
+        mode="api",
+        memory_store=memory_store,
+        memory_status=memory_status,
+    )
 
     while True:
         cwd = str(Path.cwd())
@@ -262,13 +292,24 @@ def main():
                 user_input,
                 cfg,
                 messages,
-                ui_context={"mode": "api"},
+                memory_store=memory_store,
+                ui_context={"mode": "api", "memory_status": memory_status},
             )
             if not ok:
                 console.print(f"[{C['dim']}]Bye![/]")
                 break
             continue
 
+        runtime_system_prompt = build_runtime_system_prompt(
+            BASE_SYSTEM_PROMPT,
+            cfg=cfg,
+            memory_store=memory_store,
+            mode="api",
+        )
+        if messages and messages[0].get("role") == "system":
+            messages[0]["content"] = runtime_system_prompt
+        else:
+            messages.insert(0, {"role": "system", "content": runtime_system_prompt})
         messages.append({"role": "user", "content": user_input})
         console.print()
 
@@ -286,6 +327,12 @@ def main():
                 messages.pop()
 
         console.print()
+
+    if memory_store is not None:
+        try:
+            memory_store.close()
+        except Exception:
+            pass
 
 
 if __name__ == "__main__":

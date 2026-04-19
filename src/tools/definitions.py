@@ -99,7 +99,7 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "search_knowledge",
-            "description": "Search the app's memory and knowledge database.",
+            "description": "Search the app's memory and knowledge database, including Dream categories like dream_summary, dream_cycle, dream_knowledge, and dream_source.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -116,11 +116,25 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "inspect_dream_memory",
-            "description": "Inspect the Dream loop memory snapshot and recent learning progress.",
+            "description": "Inspect a Dream memory JSON snapshot and recent learning progress. If no path is provided, the newest Dream memory file in the workspace is used.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "path": {"type": "string", "description": "Path to the Dream memory JSON file."},
+                },
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "list_dream_assets",
+            "description": "Locate Dream files, logs, core code paths, and the latest Dream snapshot in the workspace.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "directory": {"type": "string", "description": "Directory to scan for Dream artifacts."},
+                    "limit": {"type": "integer", "description": "Maximum Dream memory or log files to list (default 8)."},
                 },
             },
         },

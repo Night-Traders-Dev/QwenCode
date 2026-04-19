@@ -10,6 +10,7 @@ from ui.live_render import C, render_response
 from ui.banner import print_banner_browser
 from ui.home import print_home_dashboard
 from config.prompt import build_prompt_session, get_input_async, handle_slash
+from dream.context import wrap_user_with_runtime_context
 
 try:
     from memory.store import MemoryStore
@@ -180,8 +181,14 @@ async def browser_session(cfg: dict, headless: bool = False):
                 async def main_task():
                     nonlocal tool_history, raw_response, assistant_tokens, response_rendered
                     console.print(f"\n[{C['brand']}]◆ Qwen Coder (browser)[/] ", end="")
-                    result_text, tool_history = await controller.send_prompt_and_get_response(
+                    model_prompt = wrap_user_with_runtime_context(
                         user_input,
+                        cfg=cfg,
+                        memory_store=memory_store,
+                        mode="browser",
+                    )
+                    result_text, tool_history = await controller.send_prompt_and_get_response(
+                        model_prompt,
                         render_output=False,
                     )
                     raw_response = result_text

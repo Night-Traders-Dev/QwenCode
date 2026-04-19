@@ -23,6 +23,7 @@ QwenCode is a terminal-first Qwen harness with a browser runner, a local helper 
 - **Default Dream research lane** that pulls fresh evidence from trusted internet sources and feeds it into Gather, Verify, Examine, and Adapt
 - **Reinforcement-style curriculum memory** that tracks which concepts and source domains are helping or hurting progress
 - **Dream source recall** that reuses prior trusted sources from PostgreSQL before falling back to the open web again
+- **Dream-aware model context** so the cloud, browser, and local helper lanes know where Dream files, logs, schemas, and knowledge categories live
 - **Dream cloud fallback** to the local 4B lane when the remote orchestrator is unavailable or misconfigured
 - **Expanded toolset** for file reads, chunked file reads, shell, git, knowledge search, and Dream inspection
 - **Structured tool-result views** so diagnostics and memory hits land as UI instead of raw log text
@@ -139,6 +140,15 @@ Navigation commands:
 
 QwenCode no longer treats every answer as one generic markdown blob.
 
+The runtime prompt context now also includes Dream system details for the main API model, browser model prompts, and the direct local helper prompt path. That context includes:
+
+- where `src/run_dream.py` and `src/dream/` live
+- where Dream memory JSON and `dream.log` normally live in the workspace
+- what the Dream phases are
+- how Dream memory JSON is structured
+- which PostgreSQL categories store Dream knowledge
+- which tools to use to inspect Dream artifacts and recall Dream knowledge
+
 ### Current rendering behavior
 
 - standard markdown answers render with a cleaner lead-summary + body layout
@@ -218,6 +228,7 @@ The built-in tool schemas currently expose:
 | `git_diff` | Show a diff preview |
 | `search_knowledge` | Search memory / knowledge storage |
 | `inspect_dream_memory` | Inspect Dream memory JSON |
+| `list_dream_assets` | Locate Dream files, logs, and latest Dream snapshot |
 | `list_directory` | List files and folders |
 | `search_files` | Search across files |
 | `glob_files` | Find files by glob |

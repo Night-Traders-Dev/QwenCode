@@ -3,6 +3,8 @@ import re
 import subprocess
 from pathlib import Path
 from typing import Optional
+
+from dream.context import discover_dream_assets
 from config.config import MAX_OUTPUT_CHARS
 from config.config import load_config
 from ui.rich_ui import console
@@ -176,8 +178,9 @@ def tool_search_knowledge(
             store.close()
 
 
-def tool_inspect_dream_memory(path: str = "dream_memory.json") -> str:
-    dream_path = Path(path).expanduser()
+def tool_inspect_dream_memory(path: str = "") -> str:
+    requested = (path or "").strip()
+    dream_path = Path(requested).expanduser() if requested else discover_dream_assets()["latest_memory"]
     if not dream_path.exists():
         return f"(no Dream memory file at {dream_path})"
     try:
@@ -231,6 +234,52 @@ def tool_inspect_dream_memory(path: str = "dream_memory.json") -> str:
             )
     else:
         lines.append("  (none)")
+    return _truncate("\n".join(lines))
+
+
+def tool_list_dream_assets(
+    directory: str = ".",
+    limit: int = 8,
+) -> str:
+    assets = discover_dream_assets(directory, limit=max(1, limit))
+    snapshot = assets["snapshot"]
+    lines = [
+        f"Workspace: {assets['cwd']}",
+        f"Dream entrypoint: {assets['entrypoint']}",
+        f"Dream package: {assets['package_dir']}",
+        f"Default memory file: {assets['default_memory']}",
+        f"Default log file: {assets['default_log']}",
+        f"Latest memory file: {assets['latest_memory']}",
+        f"Latest log file: {assets['latest_log']}",
+    ]
+    if snapshot["available"]:
+        lines.extend(
+            [
+                f"Snapshot topic: {snapshot['topic']}",
+                f"Snapshot cycles: {snapshot['cycles']}",
+                f"Snapshot knowledge: {snapshot['knowledge_statements']}",
+                f"Snapshot best score: {snapshot['best_score'] * 100:.1f}%",
+                f"Snapshot research sources: {snapshot['research_sources']}",
+            ]
+        )
+        if snapshot["weak_areas"]:
+            lines.append("Snapshot weak areas: " + ", ".join(snapshot["weak_areas"]))
+    else:
+        lines.append("Snapshot: none available")
+
+    memory_files = [str(path) for path in assets["memory_files"][:limit]]
+    log_files = [str(path) for path in assets["log_files"][:limit]]
+    lines.append("")
+    lines.append("Dream memory files:")
+    if memory_files:
+        lines.extend(f"  - {item}" for item in memory_files)
+    else:
+        lines.append("  (none found)")
+    lines.append("Dream log files:")
+    if log_files:
+        lines.extend(f"  - {item}" for item in log_files)
+    else:
+        lines.append("  (none found)")
     return _truncate("\n".join(lines))
 
 def tool_search_files(
@@ -288,6 +337,7 @@ TOOL_FNS = {
     "git_diff":       tool_git_diff,
     "search_knowledge": tool_search_knowledge,
     "inspect_dream_memory": tool_inspect_dream_memory,
+    "list_dream_assets": tool_list_dream_assets,
     "list_directory": tool_list_directory,
     "search_files":   tool_search_files,
     "glob_files":     tool_glob_files,
@@ -313,6 +363,7 @@ def print_tool_call(name: str, args: dict):
         "git_diff": "🧾",
         "search_knowledge": "🧠",
         "inspect_dream_memory": "🛌",
+        "list_dream_assets": "🌙",
         "list_directory": "📁",
         "search_files": "🔍",
         "glob_files": "🗂️",

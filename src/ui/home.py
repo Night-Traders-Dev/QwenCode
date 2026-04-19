@@ -10,6 +10,7 @@ from rich.table import Table
 from rich.text import Text
 
 from config.config import BROWSER_DATA_DIR, CONFIG_FILE, HISTORY_FILE
+from dream.context import discover_dream_assets
 from tools.definitions import TOOLS
 from ui.live_render import C
 from ui.rich_ui import console
@@ -19,46 +20,29 @@ HOME_SECTIONS = ("home", "workspace", "models", "memory", "tools", "dream")
 
 
 def _dream_snapshot(path: str = "dream_memory.json") -> dict:
-    dream_path = Path(path)
-    if not dream_path.exists():
-        return {
-            "available": False,
-            "path": str(dream_path),
-            "topic": "No session saved yet",
-            "cycles": 0,
-            "knowledge_statements": 0,
-            "best_score": 0.0,
-            "weak_areas": [],
-            "recent_scores": [],
-        }
-
-    try:
-        data = json.loads(dream_path.read_text())
-    except Exception:
-        return {
-            "available": False,
-            "path": str(dream_path),
-            "topic": "Dream memory could not be read",
-            "cycles": 0,
-            "knowledge_statements": 0,
-            "best_score": 0.0,
-            "weak_areas": [],
-            "recent_scores": [],
-        }
-
-    recent_scores = [
-        entry.get("score", 0.0)
-        for entry in data.get("cycle_history", [])[-3:]
-        if isinstance(entry, dict)
-    ]
+    assets = discover_dream_assets(Path(path).parent if path else None)
+    dream_path = assets["latest_memory"]
+    recent_scores: list[float] = []
+    if dream_path.exists():
+        try:
+            data = json.loads(dream_path.read_text())
+            recent_scores = [
+                entry.get("score", 0.0)
+                for entry in data.get("cycle_history", [])[-3:]
+                if isinstance(entry, dict)
+            ]
+        except Exception:
+            pass
+    snapshot = assets["snapshot"]
     return {
-        "available": True,
+        "available": snapshot["available"],
         "path": str(dream_path),
-        "topic": data.get("topic", "Unknown topic"),
-        "cycles": len(data.get("cycle_history", [])),
-        "knowledge_statements": len(data.get("knowledge_base", [])),
-        "best_score": float(data.get("session_best_score", 0.0) or 0.0),
-        "weak_areas": data.get("weak_areas", [])[:3],
+        "log_path": str(assets["latest_log"]),
+        "topic": snapshot["topic"],
+        "cycles": snapshot["cycles"],
+        "knowledge_statements": snapshot["knowledge_statements"],
+        "best_score": snapshot["best_score"],
+        "weak_areas": snapshot["weak_areas"],
         "recent_scores": recent_scores,
     }
 
@@ -160,6 +144,7 @@ def render_home_dashboard(
                 f"Topic: {dream['topic']}",
                 f"Cycles: {dream['cycles']}    Best: {dream['best_score'] * 100:.0f}%",
                 f"Knowledge: {dream['knowledge_statements']}    Recent: {recent_scores}",
+                f"Log: {Path(dream['log_path']).name}",
                 "Open: /go dream",
             ],
             C["tool"],
@@ -284,5 +269,6 @@ def print_home_section(
     table.add_row("Best score", f"{dream['best_score'] * 100:.1f}%")
     table.add_row("Weak areas", ", ".join(dream["weak_areas"]) or "none")
     table.add_row("Memory file", dream["path"])
+    table.add_row("Log file", dream["log_path"])
     table.add_row("Run", 'uv run python src/run_dream.py "your topic"')
     console.print(Panel(table, title=f"[{C['tool']}]Dream[/]", border_style=C["tool"]))

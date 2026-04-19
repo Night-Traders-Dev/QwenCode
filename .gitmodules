@@ -1,3 +1,16 @@
+[submodule "deps/cutlass"]
+	path = deps/cutlass
+	url = https://github.com/NVIDIA/cutlass.git
+	branch = main
+
+[submodule "deps/json"]
+	path = deps/json
+	url = https://github.com/nlohmann/json.git
+
+[submodule "deps/z3"]
+	path = deps/z3
+	url = https://github.com/Z3Prover/z3.git
+
 [submodule "third_party/mirage"]
 	path = third_party/mirage
 	url = https://github.com/mirage-project/mirage.git

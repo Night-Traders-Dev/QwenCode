@@ -1,5 +1,6 @@
 import json
 import re
+import shutil
 import subprocess
 from pathlib import Path
 from typing import Optional
@@ -289,6 +290,44 @@ def tool_search_files(
     max_results: int = 50,
 ) -> str:
     root = Path(directory).expanduser()
+    if not root.exists():
+        return f"[error] Path not found: {directory}"
+
+    if shutil.which("rg"):
+        cmd = [
+            "rg",
+            "--line-number",
+            "--no-heading",
+            "--color",
+            "never",
+            "--ignore-case",
+        ]
+        if glob and glob != "*":
+            cmd.extend(["--glob", glob])
+        cmd.extend([pattern, str(root)])
+        try:
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=20,
+            )
+        except subprocess.TimeoutExpired:
+            return "[error] Search timed out"
+        except Exception as e:
+            return f"[error] {e}"
+
+        if result.returncode not in {0, 1}:
+            stderr = (result.stderr or "").strip()
+            return f"[error] {stderr or 'rg search failed'}"
+
+        lines = [line for line in (result.stdout or "").splitlines() if line.strip()]
+        if not lines:
+            return "(no matches)"
+        clipped = lines[:max_results]
+        suffix = f"\n... (stopped at {max_results})" if len(lines) > max_results else ""
+        return "\n".join(clipped) + suffix
+
     try:
         rx = re.compile(pattern, re.IGNORECASE)
     except re.error as e:

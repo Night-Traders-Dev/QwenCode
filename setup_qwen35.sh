@@ -53,6 +53,7 @@ print_info "Script directory: $SCRIPT_DIR"
 print_info "Step 1: Initializing git submodules..."
 cd "$SCRIPT_DIR"
 if [ -f ".gitmodules" ]; then
+    git submodule sync --recursive
     git submodule update --init --recursive
     if [ $? -eq 0 ]; then
         print_success "Git submodules initialized successfully"

@@ -49,6 +49,7 @@ QwenCode is a terminal-first Qwen harness with a browser runner, a local helper 
 ```bash
 git clone <repository-url>
 cd QwenCode
+git submodule sync --recursive
 git submodule update --init --recursive
 ```
 

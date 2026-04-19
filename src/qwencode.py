@@ -207,7 +207,7 @@ def main():
         cfg["base_url"] = LOCAL_BASE_URL
         cfg["api_key"]  = LOCAL_API_KEY
         if not args.model:
-            cfg["model"] = "qwen2.5-coder:7b"
+            cfg["model"] = cfg.get("local_model") or "qwen3.5:4b"
     if args.model:       cfg["model"]       = args.model
     if args.base_url:    cfg["base_url"]    = args.base_url
     if args.api_key:

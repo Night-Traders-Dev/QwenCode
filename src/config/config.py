@@ -4,6 +4,7 @@ import os
 
 # ── constants ─────────────────────────────────────────────────────────────────
 CLAUDE_OPUS_MODEL="hf.co/ermiaazarkhalili/LFM2.5-1.2B-SFT-Claude-Opus-Reasoning-Unsloth-GGUF:Q8_0"
+QWEN_SMALL_MODEL="qwen3.5:0.8b"  # Optimized for verification and grading
 
 def get_model_display_name(model_id: str) -> str:
     """Return a shortened, user-friendly display name for a model identifier.
@@ -60,7 +61,7 @@ def get_model_display_name(model_id: str) -> str:
 
 
 MISSING = []
-VERSION          = "0.0.1"
+VERSION          = "0.5.0"
 CONFIG_DIR       = Path.home() / ".qwencode"
 CONFIG_FILE      = CONFIG_DIR / "config.json"
 HISTORY_FILE     = CONFIG_DIR / "history"
@@ -71,7 +72,7 @@ DEFAULT_MODEL      = "qwen3-coder-plus"
 LOCAL_BASE_URL     = "http://localhost:11434/v1"
 LOCAL_API_KEY      = "ollama"
 LOCAL_MODEL        = CLAUDE_OPUS_MODEL  #"qwen3.5:4b"
-LOCAL_FAST_MODEL   = "Qwen/Qwen3.5-0.8B"
+LOCAL_FAST_MODEL   = QWEN_SMALL_MODEL  #"qwen3.5:0.8b"
 MEGAKERNEL_MODEL   = "Qwen/Qwen3.5-0.8B"
 MEGAKERNEL_PATH    = "third_party/mirage"
 

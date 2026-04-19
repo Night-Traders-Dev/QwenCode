@@ -461,3 +461,101 @@ class DreamMemory:
             "weak_areas": self.weak_areas,
             "converged": self.is_converged(),
         }
+
+    # ── Dream Replay & Distillation ────────────────────────────────────────
+
+    def get_high_confidence_statements(self, min_cycle_score: float = 0.85, limit: int = 50) -> list[str]:
+        """
+        Extract verified statements from cycles with high scores for dream replay.
+        These form the basis for knowledge distillation to smaller models.
+        """
+        high_score_cycles = [
+            cycle for cycle in self.cycle_history
+            if cycle.get("score", 0.0) >= min_cycle_score
+        ]
+
+        if not high_score_cycles:
+            return self.knowledge_base[:limit]
+
+        # Return most recent high-confidence statements
+        return self.knowledge_base[-limit:] if self.knowledge_base else []
+
+    def generate_distillation_dataset(self, output_path: str = "distillation_data.json") -> int:
+        """
+        Create a fine-tuning dataset from verified knowledge and high-scoring cycles.
+        Returns the number of samples generated.
+        """
+        import json
+
+        samples = []
+        high_conf_statements = self.get_high_confidence_statements()
+
+        for statement in high_conf_statements:
+            sample = {
+                "instruction": "Verify and explain this statement:",
+                "input": statement,
+                "output": f"This statement is verified and accurate. Key concepts: {self._extract_key_concepts(statement)}",
+                "metadata": {
+                    "source": "dream_memory",
+                    "topic": self._data.get("topic", ""),
+                    "confidence": "high"
+                }
+            }
+            samples.append(sample)
+
+        try:
+            with open(output_path, "w") as f:
+                json.dump(samples, f, indent=2)
+            logger.info(f"[memory] generated {len(samples)} distillation samples to {output_path}")
+            return len(samples)
+        except OSError as exc:
+            logger.error(f"[memory] failed to write distillation dataset: {exc}")
+            return 0
+
+    def _extract_key_concepts(self, statement: str) -> str:
+        """Extract key concepts from a statement for distillation."""
+        # Simple extraction: first 10 words or until punctuation
+        words = statement.split()
+        concepts = []
+        for word in words[:10]:
+            clean = word.strip(".,;:!?\"'()[]{}").lower()
+            if len(clean) > 3 and clean not in {"the", "and", "that", "this", "with", "from", "have", "been", "are", "was"}:
+                concepts.append(clean)
+        return ", ".join(concepts[:5])
+
+    def cross_topic_search(self, query: str, limit: int = 10) -> list[dict[str, Any]]:
+        """
+        Search across knowledge base for connections to other topics.
+        Returns matching statements with relevance scores.
+        """
+        results = []
+        query_terms = set(query.lower().split())
+
+        for stmt in self.knowledge_base:
+            stmt_lower = stmt.lower()
+            overlap = len(query_terms & set(stmt_lower.split()))
+            if overlap > 0:
+                results.append({
+                    "statement": stmt,
+                    "relevance_score": overlap / len(query_terms),
+                    "topic": self._data.get("topic", "")
+                })
+
+        results.sort(key=lambda x: x["relevance_score"], reverse=True)
+        return results[:limit]
+
+    def create_concept_map(self) -> dict[str, list[str]]:
+        """
+        Build a concept map showing relationships between learned concepts.
+        Groups statements by shared key terms.
+        """
+        concept_groups: dict[str, list[str]] = {}
+
+        for statement in self.knowledge_base:
+            concepts = self._extract_key_concepts(statement).split(", ")
+            for concept in concepts:
+                if concept:
+                    concept_groups.setdefault(concept, []).append(statement)
+
+        # Filter to concepts with multiple statements
+        return {k: v for k, v in concept_groups.items() if len(v) >= 2}

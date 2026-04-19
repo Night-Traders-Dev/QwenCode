@@ -180,6 +180,11 @@ class DreamSession:
                         logger.info("[session] checkpoint saved — cycle %d", self._cycle)
                         self._ui_add_event(f"Checkpoint saved at cycle {self._cycle}.", C["brand"])
 
+                        # Run dream replay every 3rd checkpoint for knowledge consolidation
+                        if (self._cycle // self.cfg.checkpoint_every_n_cycles) % 3 == 0:
+                            replay_path = f"dream_replay_cycle{self._cycle}.json"
+                            await self.run_dream_replay(replay_path)
+
                     # Convergence check
                     if self.memory.is_converged():
                         logger.info(
@@ -526,3 +531,90 @@ class DreamSession:
     def _ui_add_event(self, text: str, color: str = C["dim"]) -> None:
         if self.ui:
             self.ui.add_event(text, color)
+
+    # ── Dream Replay & Memory Enhancement ──────────────────────────────────
+
+    async def run_dream_replay(self, output_path: str = "dream_replay_output.json") -> dict:
+        """
+        Run a dream replay session to consolidate knowledge and generate distillation data.
+        Best called after a successful session or during checkpoint intervals.
+        """
+        logger.info("[session] starting dream replay for knowledge consolidation...")
+
+        # Generate distillation dataset
+        n_samples = self.memory.generate_distillation_dataset(output_path)
+
+        # Create concept map
+        concept_map = self.memory.create_concept_map()
+
+        # Get high-confidence statements for review
+        high_conf = self.memory.get_high_confidence_statements(limit=100)
+
+        result = {
+            "distillation_samples": n_samples,
+            "concept_groups": len(concept_map),
+            "high_confidence_statements": len(high_conf),
+            "output_file": output_path,
+            "timestamp": time.time(),
+        }
+
+        logger.info(
+            "[session] dream replay complete: %d samples, %d concept groups",
+            n_samples, len(concept_map)
+        )
+
+        if self.ui:
+            self.ui.add_event(f"Dream replay: {n_samples} samples generated.", C["brand"])
+
+        return result
+
+    def get_cross_topic_insights(self, query: str) -> list[dict]:
+        """
+        Search for connections between current topic and other learned material.
+        Useful for identifying transferable knowledge patterns.
+        """
+        return self.memory.cross_topic_search(query, limit=15)
+
+    def export_learning_analytics(self, output_path: str = "learning_analytics.json") -> dict:
+        """
+        Export comprehensive learning analytics including:
+        - Concept mastery progression
+        - Source reliability scores
+        - Weak area evolution
+        - Score trends
+        """
+        analytics = {
+            "topic": self.topic,
+            "total_cycles": len(self.memory.cycle_history),
+            "final_score": self.memory.session_best_score,
+            "knowledge_base_size": len(self.memory.knowledge_base),
+            "concept_mastery_progression": [
+                {"cycle": i+1, "mastery": self.memory.reinforcement.get("concept_mastery", {})}
+                for i in range(len(self.memory.cycle_history))
+            ],
+            "score_history": [
+                {"cycle": entry["cycle"], "score": entry["score"], "passed": entry["passed"]}
+                for entry in self.memory.cycle_history
+            ],
+            "weak_areas_evolution": [
+                {"cycle": entry["cycle"], "weak_areas": entry["weak_areas"]}
+                for entry in self.memory.cycle_history
+            ],
+            "source_rewards": self.memory.source_rewards,
+            "final_weak_areas": self.memory.weak_areas,
+            "concept_map_summary": {
+                concept: len(statements)
+                for concept, statements in self.memory.create_concept_map().items()
+            },
+            "timestamp": time.time(),
+        }
+
+        try:
+            import json
+            with open(output_path, "w") as f:
+                json.dump(analytics, f, indent=2)
+            logger.info(f"[session] exported learning analytics to {output_path}")
+        except OSError as exc:
+            logger.error(f"[session] failed to export analytics: {exc}")
+
+        return analytics

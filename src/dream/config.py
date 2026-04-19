@@ -43,7 +43,7 @@ class DreamConfig:
         timeout=300.0,
     ))
     medium: ModelConfig = field(default_factory=lambda: ModelConfig(
-        name=CLAUDE_OPUS_MODEL,  #"qwen3.5:4b",
+        name=CLAUDE_OPUS_MODEL,  # LFM2.5-1.2B for reasoning-heavy tasks
         role="medium-student",
         base_url=LOCAL_BASE_URL,
         api_key=LOCAL_API_KEY,
@@ -53,7 +53,7 @@ class DreamConfig:
         timeout=120.0,
     ))
     small: ModelConfig = field(default_factory=lambda: ModelConfig(
-        name=CLAUDE_OPUS_MODEL,  # "qwen3.5:0.8b",
+        name="qwen3.5:0.8b",  # Optimized for verification and grading
         role="small-verifier",
         base_url=LOCAL_BASE_URL,
         api_key=LOCAL_API_KEY,
@@ -72,7 +72,7 @@ class DreamConfig:
 
     # ── Session parameters ─────────────────────────────────────────────────
     target_duration_hours: float = 4.0
-    checkpoint_every_n_cycles: int = 10 # number of cycles between checkpoints 
+    checkpoint_every_n_cycles: int = 10 # number of cycles between checkpoints
     memory_path: str = "dream_memory.json"
     log_path: str = "dream.log"
     resume_existing: bool = False

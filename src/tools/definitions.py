@@ -20,6 +20,22 @@ TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "read_file_chunk",
+            "description": "Read a specific line range from a file with line numbers.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string", "description": "Path to the file."},
+                    "start_line": {"type": "integer", "description": "1-based start line."},
+                    "end_line": {"type": "integer", "description": "1-based end line, inclusive."},
+                },
+                "required": ["path"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "write_file",
             "description": "Write (or overwrite) a file on disk with the given content.",
             "parameters": {
@@ -48,6 +64,64 @@ TOOLS = [
                     "workdir": {"type": "string",  "description": "Working directory (default: cwd)."},
                 },
                 "required": ["command"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "git_status",
+            "description": "Show concise git status for a repository.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "directory": {"type": "string", "description": "Repository directory (default: cwd)."},
+                },
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "git_diff",
+            "description": "Show a git diff preview for the repo or a single path.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "directory": {"type": "string", "description": "Repository directory (default: cwd)."},
+                    "path": {"type": "string", "description": "Optional file path within the repo."},
+                    "target": {"type": "string", "description": "Git target to diff against (default HEAD)."},
+                },
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "search_knowledge",
+            "description": "Search the app's memory and knowledge database.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "description": "Search query."},
+                    "limit": {"type": "integer", "description": "Maximum rows to return (default 10)."},
+                    "category": {"type": "string", "description": "Optional knowledge category filter."},
+                    "session_id": {"type": "string", "description": "Optional session filter."},
+                },
+                "required": ["query"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "inspect_dream_memory",
+            "description": "Inspect the Dream loop memory snapshot and recent learning progress.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string", "description": "Path to the Dream memory JSON file."},
+                },
             },
         },
     },

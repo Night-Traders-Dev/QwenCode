@@ -36,17 +36,34 @@ class BrowserTranscriptMirror:
         const cleanText = (el) => {
             if (!el) return '';
             const clone = el.cloneNode(true);
+
+            clone.querySelectorAll('a[href]').forEach(link => {
+                const label = normalize(link.innerText || link.textContent || '');
+                const href = (link.getAttribute('href') || '').trim();
+                const replacementText = label && href
+                    ? `${label} (${href})`
+                    : (label || href || '');
+                link.replaceWith(document.createTextNode(replacementText ? ` ${replacementText} ` : ' '));
+            });
+
             clone.querySelectorAll(
-                'textarea,input,button,a[href],nav,aside,header,footer,script,style,svg,' +
+                'textarea,input,button,nav,aside,header,footer,script,style,svg,' +
                 '[contenteditable="true"],[role="textbox"],' +
                 '[class*="source"],[class*="cite"],[class*="reference"],' +
                 '[class*="toolbar"],[class*="sidebar"],[class*="search"],' +
                 '[class*="action"],[class*="feedback"]'
-            ).forEach(n => n.remove());
+            ).forEach(n => {
+                const tag = (n.tagName || '').toLowerCase();
+                const sep = ['div', 'p', 'section', 'article', 'li', 'ul', 'ol', 'table', 'tr', 'td', 'th', 'br'].includes(tag)
+                    ? '\n'
+                    : ' ';
+                n.replaceWith(document.createTextNode(sep));
+            });
 
             const raw = normalize(clone.innerText || clone.textContent || '');
             const cleaned = [];
             let lastBlank = false;
+            const seenLines = new Set();
 
             for (const part of raw.split('\n')) {
                 const line = part.trim();
@@ -60,6 +77,11 @@ class BrowserTranscriptMirror:
                 if (badLine.test(line) || skipLine.test(line)) {
                     continue;
                 }
+                // Skip duplicate lines
+                if (seenLines.has(line)) {
+                    continue;
+                }
+                seenLines.add(line);
                 cleaned.push(line);
                 lastBlank = false;
             }
@@ -306,9 +328,10 @@ class BrowserTranscriptMirror:
         self,
         renderer: LiveRenderer,
         timeout_ms: int = 120_000,
-        poll_interval: float = 0.15,
-        answer_stable_seconds: float = 3.5,
-        post_thinking_grace_seconds: float = 4.0,
+        poll_interval: float = 0.10,
+        answer_stable_seconds: float = 0.80,
+        post_thinking_grace_seconds: float = 0.40,
+        render_output: bool = True,
     ) -> str:
         renderer.reset()
         start = time.monotonic()
@@ -317,6 +340,8 @@ class BrowserTranscriptMirror:
         started = False
         last = dict(self._baseline)
         last_answer_len = 0
+        stable_count = 0  # Count consecutive polls with no change
+        required_stable_polls = max(1, int(answer_stable_seconds / poll_interval))
 
         while (time.monotonic() - start) * 1000 < timeout_ms:
             state = self._extract_state(await self._probe())
@@ -342,7 +367,7 @@ class BrowserTranscriptMirror:
                 # This prevents re-printing when the same content is detected
                 answer_growing = len(state["answer_text"]) > last_answer_len
                 thinking_changed = state["thinking_text"] != last["thinking_text"]
-                
+
                 if answer_growing or thinking_changed or not last_answer_len:
                     renderer.update(
                         thinking_text=state["thinking_text"],
@@ -354,23 +379,23 @@ class BrowserTranscriptMirror:
                 if changed:
                     last_change = now
                     last = dict(state)
+                    stable_count = 0  # Reset stable counter on any change
+                else:
+                    stable_count += 1
 
-                if state["answer_text"]:
-                    waiting_after_thinking = None
-                    if (now - last_change) >= answer_stable_seconds and not state["busy"]:
+                # Check if we have a complete answer and it's been stable
+                if state["answer_text"] and not state["busy"]:
+                    if stable_count >= required_stable_polls:
+                        break
+                elif state["thinking_text"] and state["thinking_done"] and not state["busy"]:
+                    if waiting_after_thinking is None:
+                        waiting_after_thinking = now
+                    elif (now - waiting_after_thinking) >= post_thinking_grace_seconds:
                         break
                 else:
-                    if state["thinking_text"] and state["thinking_done"] and not state["busy"]:
-                        if waiting_after_thinking is None:
-                            waiting_after_thinking = now
-                        elif (now - waiting_after_thinking) >= post_thinking_grace_seconds:
-                            break
-                    else:
-                        waiting_after_thinking = None
+                    waiting_after_thinking = None
 
             await asyncio.sleep(poll_interval)
 
-        renderer.finish()
+        renderer.finish(render_output=render_output)
         return renderer.answer_text or renderer.thinking_text
-
-

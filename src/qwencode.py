@@ -31,11 +31,31 @@ Requirements:
 
 import argparse
 import asyncio
+import importlib
 import json
+import os
 import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
+
+
+def _reexec_in_project_venv_if_needed():
+    """Prefer the repo virtualenv when the current interpreter lacks optional deps."""
+    current = Path(sys.executable).resolve()
+    repo_root = Path(__file__).resolve().parent.parent
+    venv_python = repo_root / ".venv" / "bin" / "python"
+    if not venv_python.exists() or current == venv_python.resolve():
+        return
+
+    for module_name in ("psycopg2",):
+        try:
+            importlib.import_module(module_name)
+        except ImportError:
+            os.execv(str(venv_python), [str(venv_python), str(Path(__file__).resolve()), *sys.argv[1:]])
+
+
+_reexec_in_project_venv_if_needed()
 
 from openai import OpenAI, APIError, APIConnectionError
 from rich.panel import Panel
@@ -54,6 +74,7 @@ from tools.api import agentic_turn_api
 from config.config import MISSING, HISTORY_FILE, LOCAL_BASE_URL, LOCAL_API_KEY, load_config, save_config, BROWSER_DATA_DIR, MAX_TOOL_ITERS
 from config.prompt import build_prompt_session, get_input, handle_slash
 from browser.session import browser_session
+from ui.home import print_home_dashboard
 from ui.rich_ui import console
 from ui.live_render import C
 from ui.banner import print_banner
@@ -96,7 +117,14 @@ You are Qwen Coder, an expert AI software engineer running inside a terminal.
 You have access to tools that let you read and write files, run shell commands,
 search for text, and list directories on the user's machine.
 
+You have internet access for searching and browsing.
+
 Guidelines:
+- Only respond in english.
+- Always use tools for tasks like file I/O, shell commands, or searching.
+- When using tools, be concise and precise with your instructions.
+- For file paths, use absolute paths or paths relative to the current working directory.
+- When running shell commands, ensure they are safe and non-destructive.
 - Think step-by-step before acting. Use tools to gather context before editing.
 - Prefer minimal, precise edits. Don't rewrite files unnecessarily.
 - Always show what you changed and why.
@@ -215,6 +243,7 @@ def main():
     session  = build_prompt_session()
 
     print_banner(cfg)
+    print_home_dashboard(cfg, mode="api")
 
     while True:
         cwd = str(Path.cwd())
@@ -229,7 +258,12 @@ def main():
             continue
 
         if user_input.startswith("/"):
-            ok, messages = handle_slash(user_input, cfg, messages)
+            ok, messages = handle_slash(
+                user_input,
+                cfg,
+                messages,
+                ui_context={"mode": "api"},
+            )
             if not ok:
                 console.print(f"[{C['dim']}]Bye![/]")
                 break

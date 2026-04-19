@@ -1,5 +1,6 @@
 import json
 import sys
+from typing import Any
 from openai import OpenAI, APIError, APIConnectionError
 from tools.definitions import TOOLS
 from tools.tools import dispatch_tool, print_tool_call, print_tool_result

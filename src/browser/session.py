@@ -4,7 +4,7 @@ import json
 import asyncio
 import time
 from browser.controller import QwenBrowserController
-from config.config import BROWSER_DATA_DIR, HISTORY_FILE, MEMORY_DIR
+from config.config import BROWSER_DATA_DIR, HISTORY_FILE, MEMORY_DIR, get_model_display_name
 from ui.rich_ui import console
 from ui.live_render import C, render_response, format_response_text
 from ui.banner import print_banner_browser
@@ -99,8 +99,8 @@ def _shell_section_text(section: str, cfg: dict, memory_store=None, memory_statu
     assets = discover_dream_assets(Path.cwd())
     snapshot = assets["snapshot"]
     backend = (memory_status or {}).get("backend", "not initialized")
-    local_model = cfg.get("local_model", "disabled") if cfg.get("local_enabled", True) else "disabled"
-    fast_model = cfg.get("local_fast_model", "disabled") if cfg.get("local_fast_enabled", True) else "disabled"
+    local_model = get_model_display_name(cfg.get("local_model", "disabled")) if cfg.get("local_enabled", True) else "disabled"
+    fast_model = get_model_display_name(cfg.get("local_fast_model", "disabled")) if cfg.get("local_fast_enabled", True) else "disabled"
 
     if section == "workspace":
         return "\n".join(
@@ -116,7 +116,7 @@ def _shell_section_text(section: str, cfg: dict, memory_store=None, memory_statu
         return "\n".join(
             [
                 "Models",
-                f"- Cloud: {cfg.get('model', 'unknown')}",
+                f"- Cloud: {get_model_display_name(cfg.get('model', 'unknown'))}",
                 f"- Cloud endpoint: {cfg.get('base_url', 'unknown')}",
                 f"- Local: {local_model}",
                 f"- Fast local: {fast_model}",

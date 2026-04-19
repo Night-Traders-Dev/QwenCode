@@ -4,6 +4,61 @@ import os
 
 # ── constants ─────────────────────────────────────────────────────────────────
 CLAUDE_OPUS_MODEL="hf.co/ermiaazarkhalili/LFM2.5-1.2B-SFT-Claude-Opus-Reasoning-Unsloth-GGUF:Q8_0"
+
+def get_model_display_name(model_id: str) -> str:
+    """Return a shortened, user-friendly display name for a model identifier.
+
+    Examples:
+        - \"hf.co/ermiaazarkhalili/LFM2.5-1.2B-SFT-Claude-Opus-Reasoning-Unsloth-GGUF:Q8_0\"
+          → \"LFM2.5-1.2B (Q8_0)\"
+        - \"qwen3.5:4b\" → \"qwen3.5:4b\"
+        - \"Qwen/Qwen3.5-0.8B\" → \"Qwen3.5-0.8B\"
+    """
+    if not model_id:
+        return "Unknown"
+
+    # Handle hf.co/ URLs
+    if model_id.startswith("hf.co/"):
+        parts = model_id.split("/")
+        if len(parts) >= 3:
+            # Extract model name and quantization
+            model_name = parts[2]  # Everything after author/
+
+            # Split off quantization suffix (e.g., :Q8_0)
+            if ":" in model_name:
+                name_part, quant = model_name.rsplit(":", 1)
+                # Extract size pattern like 1.2B, 4B, 0.8B, etc.
+                import re
+                size_match = re.search(r'(\d+\.?\d*[BKMG])', name_part, re.IGNORECASE)
+                size = size_match.group(1) if size_match else ""
+
+                # Try to extract a meaningful short name
+                # Look for patterns like LFM2.5-1.2B-SFT-Claude-Opus-Reasoning-Unsloth-GGUF
+                segments = name_part.split("-")
+                if len(segments) >= 2:
+                    # Use first segment + size if available
+                    short_name = segments[0]  # e.g., "LFM2.5"
+                    if size and size not in short_name:
+                        return f"{short_name}-{size} ({quant})"
+                    elif size:
+                        return f"{short_name} ({quant})"
+                    else:
+                        return f"{short_name} ({quant})"
+                else:
+                    return f"{name_part} ({quant})" if quant else name_part
+
+            return model_name
+
+        return model_id
+
+    # Handle HuggingFace standard format (author/model)
+    if "/" in model_id and not model_id.startswith("http"):
+        return model_id.split("/")[-1]
+
+    # Return as-is for simple identifiers
+    return model_id
+
+
 MISSING = []
 VERSION          = "0.5.0"
 CONFIG_DIR       = Path.home() / ".qwencode"

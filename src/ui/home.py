@@ -9,7 +9,7 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from config.config import BROWSER_DATA_DIR, CONFIG_FILE, HISTORY_FILE
+from config.config import BROWSER_DATA_DIR, CONFIG_FILE, HISTORY_FILE, get_model_display_name
 from dream.context import discover_dream_assets
 from tools.definitions import TOOLS
 from ui.live_render import C
@@ -94,7 +94,7 @@ def render_home_dashboard(
 ) -> RenderableType:
     dream = _dream_snapshot()
     recent_scores = ", ".join(f"{score * 100:.0f}%" for score in dream["recent_scores"]) or "none yet"
-    fast_model = cfg.get("local_fast_model") if cfg.get("local_fast_enabled", True) else "disabled"
+    fast_model = get_model_display_name(cfg.get("local_fast_model")) if cfg.get("local_fast_enabled", True) else "disabled"
 
     hero = Panel(
         Group(
@@ -104,7 +104,7 @@ def render_home_dashboard(
                 style=C["dim"],
             ),
             Text(
-                f"Current mode: {mode}    Active model: {cfg.get('model', 'unknown')}",
+                f"Current mode: {mode}    Active model: {get_model_display_name(cfg.get('model', 'unknown'))}",
                 style=C["text"],
             ),
         ),
@@ -126,8 +126,8 @@ def render_home_dashboard(
         _card(
             "Models",
             [
-                f"Cloud: {cfg.get('model', 'unknown')}",
-                f"Local: {cfg.get('local_model', 'disabled') if cfg.get('local_enabled', True) else 'disabled'}",
+                f"Cloud: {get_model_display_name(cfg.get('model', 'unknown'))}",
+                f"Local: {get_model_display_name(cfg.get('local_model', 'disabled')) if cfg.get('local_enabled', True) else 'disabled'}",
                 f"Fast path: {fast_model}",
                 "Open: /go models",
             ],
@@ -218,11 +218,11 @@ def print_home_section(
         table = Table(box=box.SIMPLE, show_header=False, padding=(0, 1))
         table.add_column(style=C["accent"])
         table.add_column(style=C["text"], overflow="fold")
-        table.add_row("Cloud", cfg.get("model", "unknown"))
+        table.add_row("Cloud", get_model_display_name(cfg.get("model", "unknown")))
         table.add_row("Cloud endpoint", cfg.get("base_url", "unknown"))
-        table.add_row("Local", cfg.get("local_model", "disabled") if cfg.get("local_enabled", True) else "disabled")
+        table.add_row("Local", get_model_display_name(cfg.get("local_model", "disabled")) if cfg.get("local_enabled", True) else "disabled")
         table.add_row("Formatter", "enabled" if cfg.get("local_format_enabled", False) else "disabled")
-        table.add_row("Fast local", cfg.get("local_fast_model", "disabled") if cfg.get("local_fast_enabled", True) else "disabled")
+        table.add_row("Fast local", get_model_display_name(cfg.get("local_fast_model", "disabled")) if cfg.get("local_fast_enabled", True) else "disabled")
         table.add_row("Fast backend", cfg.get("local_fast_backend", "auto"))
         console.print(Panel(table, title=f"[{C['accent']}]Model Stack[/]", border_style=C["accent"]))
         return

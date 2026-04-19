@@ -48,8 +48,8 @@ class DreamConfig:
         base_url=LOCAL_BASE_URL,
         api_key=LOCAL_API_KEY,
         temperature=0.7,
-        max_tokens=2048,
-        context_window=8192,
+        max_tokens=4096,
+        context_window=12288,
         timeout=120.0,
     ))
     small: ModelConfig = field(default_factory=lambda: ModelConfig(
@@ -64,15 +64,15 @@ class DreamConfig:
     ))
 
     # ── Cycle parameters ───────────────────────────────────────────────────
-    gather_queries_per_model: int = 10   # queries each model fires per gather phase
+    gather_queries_per_model: int = 20   # queries each model fires per gather phase
     questions_per_test: int = 100        # questions the cloud generates per test
-    min_verify_confidence: float = 0.6  # 0–1 threshold; below = data flagged
-    passing_score: float = 0.70         # grade at which a topic is "learned"
-    max_topic_retries: int = 5          # cycles before moving past a topic
+    min_verify_confidence: float = 0.7  # 0–1 threshold; below = data flagged
+    passing_score: float = 0.80         # grade at which a topic is "learned"
+    max_topic_retries: int = 3          # cycles before moving past a topic
 
     # ── Session parameters ─────────────────────────────────────────────────
     target_duration_hours: float = 4.0
-    checkpoint_every_n_cycles: int = 10
+    checkpoint_every_n_cycles: int = 10 # number of cycles between checkpoints 
     memory_path: str = "dream_memory.json"
     log_path: str = "dream.log"
     resume_existing: bool = False

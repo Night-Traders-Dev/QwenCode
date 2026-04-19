@@ -12,7 +12,7 @@ from config.config import (
     DEFAULT_MODEL,
     LOCAL_API_KEY,
     LOCAL_BASE_URL,
-    CLAUDE_OPUS_MODEL
+    CLAUDE_OPUS_MODEL,
     load_config,
 )
 

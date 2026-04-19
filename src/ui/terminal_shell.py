@@ -34,6 +34,7 @@ class TerminalShell:
         self.main_tokens = 0
         self.local_tokens = 0
         self._task_started_at = 0.0
+        self._elapsed_frozen: float | None = 0.0
         self._closed = False
         self._output_text = ""
         self._max_output_chars = 240_000
@@ -134,7 +135,29 @@ class TerminalShell:
         def _toggle_all(_event) -> None:
             self.toggle_all_blocks(reasoning_only=True)
 
+        @kb.add("right")
+        def _accept_suggestion_right(event) -> None:
+            if self._accept_autosuggestion():
+                return
+            event.current_buffer.cursor_right(count=1)
+
+        @kb.add("c-f")
+        def _accept_suggestion_ctrl_f(event) -> None:
+            if self._accept_autosuggestion():
+                return
+            event.current_buffer.cursor_right(count=1)
+
         return kb
+
+    def _accept_autosuggestion(self) -> bool:
+        buffer = self.input_area.buffer
+        if self.app.current_buffer is not buffer:
+            return False
+        suggestion = buffer.suggestion
+        if suggestion and buffer.document.is_cursor_at_the_end:
+            buffer.insert_text(suggestion.text)
+            return True
+        return False
 
     def _trim(self, value: str, limit: int) -> str:
         text = " ".join((value or "").split())
@@ -143,9 +166,12 @@ class TerminalShell:
         return text[: limit - 3].rstrip() + "..."
 
     def _format_elapsed(self) -> str:
-        if not self._task_started_at:
+        if self._elapsed_frozen is not None:
+            elapsed = self._elapsed_frozen
+        elif not self._task_started_at:
             return "0s"
-        elapsed = max(0.0, time.time() - self._task_started_at)
+        else:
+            elapsed = max(0.0, time.time() - self._task_started_at)
         if elapsed < 1:
             return f"{elapsed * 1000:.0f}ms"
         if elapsed < 60:
@@ -166,7 +192,7 @@ class TerminalShell:
         return "\n".join([headline, detail, current])
 
     def _input_header_text(self) -> str:
-        line = "Input | Enter send | Ctrl-L clear | F4 latest think | F5 all think | Ctrl-D exit"
+        line = "Input | Enter send | Right/Ctrl-F accept suggestion | Ctrl-L clear | F4 latest think | F5 all think | Ctrl-D exit"
         if self.model_summary:
             line += f" | {self.model_summary}"
         return self._trim(line, 170)
@@ -398,6 +424,12 @@ class TerminalShell:
             self.local_tokens = local_tokens
         if reset_timer:
             self._task_started_at = time.time()
+            self._elapsed_frozen = None
+        elif state in {"completed", "failed"} and self._task_started_at:
+            self._elapsed_frozen = max(0.0, time.time() - self._task_started_at)
+        elif state == "idle":
+            self._task_started_at = 0.0
+            self._elapsed_frozen = 0.0
         self.invalidate()
 
     async def run_async(self) -> None:

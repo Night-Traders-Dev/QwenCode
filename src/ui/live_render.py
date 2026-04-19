@@ -1,4 +1,6 @@
 import re
+import shutil
+import textwrap
 from ui.rich_ui import console
 from rich import box
 from rich.columns import Columns
@@ -73,6 +75,8 @@ def _extract_line_value(label: str, text: str) -> str:
 def _clean_weather_value(value: str) -> str:
     cleaned = (value or "").strip()
     cleaned = re.sub(r"^[\s:;,-]+", "", cleaned)
+    cleaned = re.sub(r"https?://\S+", "", cleaned)
+    cleaned = re.sub(r"\bwww\.[^\s]+", "", cleaned)
     cleaned = re.sub(r"\s+", " ", cleaned)
     replacements = {
         "Accu Weather": "AccuWeather",
@@ -180,8 +184,8 @@ def _parse_weather_report(text: str) -> dict | None:
         r"Condition Details:\s+(.+?)(?=\s+(?:Temperature:|Feels Like:|Conditions:|Humidity:|Wind:|UV Index:|Visibility:|Source:|Today's Forecast:|Weekend Outlook:|Note:|$))",
         flat,
     )
-    temperature = _extract_metric(r"Temperature:\s*([0-9\-]+°(?:\s*[FC])?(?:\s*\([^)]+\))?)", flat)
-    feels_like = _extract_metric(r"Feels Like:\s*([0-9\-]+°(?:\s*[FC])?(?:\s*\([^)]+\))?)", flat)
+    temperature = _extract_metric(r"Temperature:\s*([0-9\-]+(?:°)?(?:\s*[FC])?(?:\s*\([^)]+\))?)", flat)
+    feels_like = _extract_metric(r"Feels Like:\s*([0-9\-]+(?:°)?(?:\s*[FC])?(?:\s*\([^)]+\))?)", flat)
     humidity = _extract_metric(r"Humidity:\s*([0-9\-]+%)", flat)
     wind = _extract_metric(r"Wind:\s*(.+?)(?=\s+(?:UV Index:|Visibility:|Source:|Today's Forecast:|Weekend Outlook:|Note:|$))", flat)
     uv_index = _extract_metric(r"UV Index:\s*(.+?)(?=\s+(?:Visibility:|Source:|Today's Forecast:|Weekend Outlook:|Note:|$))", flat)
@@ -546,13 +550,102 @@ def build_semantic_renderable(text: str, title: str = "Response"):
     return None
 
 
+def _shell_width(default: int = 76) -> int:
+    columns = shutil.get_terminal_size((100, 40)).columns
+    return max(44, min(default, columns - 8))
+
+
+def _box_lines(title: str, lines: list[str], width: int | None = None) -> str:
+    inner_width = width or _shell_width()
+    wrapped: list[str] = []
+    for raw_line in lines:
+        if raw_line == "":
+            wrapped.append("")
+            continue
+        wrapped.extend(textwrap.wrap(raw_line, width=inner_width) or [""])
+
+    border = "+" + "-" * (inner_width + 2) + "+"
+    title_line = f"| {title[:inner_width].ljust(inner_width)} |"
+    body = [f"| {line.ljust(inner_width)} |" for line in wrapped] or [f"| {' '.ljust(inner_width)} |"]
+    return "\n".join([border, title_line, border, *body, border])
+
+
+def _metric_box(title: str, rows: list[tuple[str, str]], width: int | None = None) -> str:
+    valid_rows = [(label, value) for label, value in rows if value]
+    if not valid_rows:
+        return ""
+    label_width = min(14, max(len(label) for label, _ in valid_rows))
+    lines = [f"{label.ljust(label_width)} : {value}" for label, value in valid_rows]
+    return _box_lines(title, lines, width=width)
+
+
+def _code_block_text(language: str, code: str) -> str:
+    code = (code or "").rstrip("\n")
+    lines = code.splitlines() or [""]
+    numbered = [f"{idx:>3} | {line}" for idx, line in enumerate(lines, start=1)]
+    lang = (language or "text").strip() or "text"
+    return f"```{lang}\n" + "\n".join(numbered) + "\n```"
+
+
+def _format_markdown_paragraphs(text: str) -> str:
+    width = _shell_width(default=88)
+    paragraphs = [part.strip() for part in text.split("\n\n") if part.strip()]
+    rendered: list[str] = []
+    for paragraph in paragraphs:
+        lines = paragraph.splitlines()
+        if paragraph.startswith("#"):
+            rendered.append(paragraph)
+            continue
+        if all(line.lstrip().startswith(("- ", "* ", "1.", "2.", "3.", "4.", "5.", "6.", "7.", "8.", "9.")) for line in lines):
+            items = []
+            for line in lines:
+                prefix, content = (line[:2], line[2:].strip()) if line.lstrip().startswith(("- ", "* ")) else (line.split(".", 1)[0] + ".", line.split(".", 1)[1].strip())
+                items.append(textwrap.fill(content, width=width, initial_indent=f"{prefix} ", subsequent_indent="   "))
+            rendered.append("\n".join(items))
+            continue
+        rendered.append(textwrap.fill(" ".join(line.strip() for line in lines), width=width))
+    return "\n\n".join(rendered)
+
+
+def _format_code_sections(cleaned: str) -> str:
+    parts = re.split(r"(```[\s\S]*?```)", cleaned)
+    rendered: list[str] = []
+    for part in parts:
+        if not part.strip():
+            continue
+        if part.startswith("```"):
+            match = re.match(r"```([^\n`]*)\n([\s\S]*?)```$", part.strip())
+            if match:
+                rendered.append(_code_block_text(match.group(1).strip(), match.group(2)))
+            else:
+                rendered.append(part.strip())
+        else:
+            rendered.append(_format_markdown_paragraphs(part.strip()))
+    return "\n\n".join(item for item in rendered if item.strip())
+
+
+def _looks_like_code(text: str) -> bool:
+    lines = [line for line in (text or "").splitlines() if line.strip()]
+    if not lines:
+        return False
+    score = 0
+    for line in lines[:20]:
+        stripped = line.strip()
+        if stripped.startswith(("Traceback", "File ", "def ", "class ", "import ", "from ", "$ ", "> ")):
+            score += 2
+        if any(token in stripped for token in ("{", "}", "=>", "();", "::", "</", "<div", "```")):
+            score += 1
+    return score >= 4
+
+
 def _format_weather_text(title: str, weather: dict) -> str:
     lines = [f"{title}: {weather.get('location') or 'Weather Report'}"]
     if weather.get("timestamp"):
         lines.append(f"As of {weather['timestamp']}")
-    lines.append("")
-    lines.append("Current Conditions")
-    for label, value in [
+    summary = "\n".join(lines).strip()
+    metrics = _metric_box(
+        "Current Conditions",
+        [
         ("Conditions", weather.get("conditions")),
         ("Temperature", weather.get("temperature")),
         ("Feels like", weather.get("feels_like")),
@@ -560,20 +653,28 @@ def _format_weather_text(title: str, weather: dict) -> str:
         ("Wind", weather.get("wind")),
         ("UV index", weather.get("uv_index")),
         ("Visibility", weather.get("visibility")),
-    ]:
-        if value:
-            lines.append(f"- {label}: {value}")
+        ],
+    )
+    blocks = [summary]
+    if metrics:
+        blocks.append(metrics)
     if weather.get("today"):
-        lines.extend(["", "Today", weather["today"]])
+        blocks.append(_box_lines("Today", [weather["today"]]))
     if weather.get("daily"):
-        lines.extend(["", "Extended Forecast"])
-        for row in weather["daily"]:
-            lines.append(f"- {row['day']}: high {row['high']}, low {row['low']}, {row['detail']}")
+        blocks.append(
+            _box_lines(
+                "Extended Forecast",
+                [
+                    f"{row['day']:<10} High {row['high']:<6} Low {row['low']:<6} {row['detail']}"
+                    for row in weather["daily"]
+                ],
+            )
+        )
     if weather.get("note"):
-        lines.extend(["", "Advisory", weather["note"]])
+        blocks.append(_box_lines("Advisory", [weather["note"]]))
     if weather.get("source"):
-        lines.extend(["", f"Source: {weather['source']}"])
-    return "\n".join(lines).strip()
+        blocks.append(_box_lines("Source", [weather["source"]]))
+    return "\n\n".join(block for block in blocks if block.strip())
 
 
 def _format_dream_text(title: str, report: dict) -> str:
@@ -607,15 +708,16 @@ def _format_knowledge_text(title: str, result: dict) -> str:
 
 
 def _format_fact_sheet_text(title: str, pairs: list[tuple[str, str]]) -> str:
-    lines = [title]
-    lines.extend(f"{key}: {value}" for key, value in pairs)
-    return "\n".join(lines).strip()
+    return _metric_box(title, pairs) or title
 
 
 def format_response_text(text: str, title: str = "Response") -> str:
     cleaned = normalize_markdown(text)
     if not cleaned:
         return ""
+
+    if "```" in (text or ""):
+        return _format_code_sections((text or "").replace("\r\n", "\n").replace("\r", "\n"))
 
     weather = _parse_weather_report(text)
     if weather:
@@ -633,7 +735,10 @@ def format_response_text(text: str, title: str = "Response") -> str:
     if fact_sheet:
         return _format_fact_sheet_text(title, fact_sheet)
 
-    return cleaned
+    if _looks_like_code(cleaned):
+        return _code_block_text("text", cleaned)
+
+    return _format_markdown_paragraphs(cleaned)
 
 
 def render_response(text: str, title: str = "Response"):

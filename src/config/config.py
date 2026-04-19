@@ -3,6 +3,7 @@ import json
 import os
 
 # ── constants ─────────────────────────────────────────────────────────────────
+CLAUDE_OPUS_MODEL="hf.co/ermiaazarkhalili/LFM2.5-1.2B-SFT-Claude-Opus-Reasoning-Unsloth-GGUF:Q8_0"
 MISSING = []
 VERSION          = "0.5.0"
 CONFIG_DIR       = Path.home() / ".qwencode"
@@ -14,8 +15,8 @@ DASHSCOPE_BASE_URL = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
 DEFAULT_MODEL      = "qwen3-coder-plus"
 LOCAL_BASE_URL     = "http://localhost:11434/v1"
 LOCAL_API_KEY      = "ollama"
-LOCAL_MODEL        = "qwen3.5:4b"
-LOCAL_FAST_MODEL   = "qwen3.5:0.8b"
+LOCAL_MODEL        = CLAUDE_OPUS_MODEL  #"qwen3.5:4b"
+LOCAL_FAST_MODEL   = CLAUDE_OPUS_MODEL  #"qwen3.5:0.8b"
 MEGAKERNEL_MODEL   = "Qwen/Qwen3.5-0.8B"
 MEGAKERNEL_PATH    = "third_party/mirage"
 

@@ -6,6 +6,7 @@ The session.py orchestrator calls them in sequence each cycle.
 """
 
 import asyncio
+import json
 import logging
 import time
 from typing import Any
@@ -15,7 +16,7 @@ from dream.agents.medium import MediumAgent
 from dream.agents.small import SmallAgent
 from dream.config import DreamConfig
 from dream.memory.dream_memory import DreamMemory
-from dream.research import DreamResearcher, ResearchPacket
+from dream.research import DreamResearcher, ResearchPacket, ResearchSource
 
 logger = logging.getLogger("dream.phases")
 
@@ -74,6 +75,106 @@ async def _research_packet(
     return packet
 
 
+def _stored_research_packet(
+    topic: str,
+    memory: DreamMemory,
+    cfg: DreamConfig,
+    memory_store: Any = None,
+) -> ResearchPacket | None:
+    if memory_store is None:
+        return None
+
+    try:
+        rows = memory_store.list_knowledge(
+            limit=max(cfg.research_max_sources * 2, 6),
+            category="dream_source",
+            metadata={"topic": topic},
+        )
+    except Exception as exc:
+        logger.warning("[research] stored-source lookup failed for %r: %s", topic, exc)
+        return None
+
+    sources: list[ResearchSource] = []
+    seen_urls: set[str] = set()
+    for row in rows:
+        try:
+            payload = json.loads(row.get("content", "") or "{}")
+        except json.JSONDecodeError:
+            continue
+        url = str(payload.get("url", "")).strip()
+        snippet = str(payload.get("snippet", "")).strip()
+        if not url or not snippet or url in seen_urls:
+            continue
+        seen_urls.add(url)
+        sources.append(
+            ResearchSource(
+                title=str(payload.get("title", "") or row.get("source") or "Stored source"),
+                url=url,
+                domain=str(payload.get("domain", "")).strip(),
+                snippet=snippet[: cfg.research_chars_per_source],
+                query=str(payload.get("query", topic)).strip(),
+            )
+        )
+        if len(sources) >= cfg.research_max_sources:
+            break
+
+    if not sources:
+        return None
+
+    researcher = DreamResearcher(cfg)
+    return ResearchPacket(
+        query=memory.research_query or topic,
+        focus_terms=memory.reinforcement_focus(3),
+        sources=sources,
+        candidate_statements=researcher._distill_candidate_statements(sources),
+    )
+
+
+def _merge_research_packets(
+    primary: ResearchPacket | None,
+    supplement: ResearchPacket | None,
+    cfg: DreamConfig,
+) -> ResearchPacket | None:
+    if primary is None:
+        return supplement
+    if supplement is None:
+        return primary
+
+    sources: list[ResearchSource] = []
+    seen_urls: set[str] = set()
+    for source in primary.sources + supplement.sources:
+        if source.url in seen_urls:
+            continue
+        seen_urls.add(source.url)
+        sources.append(source)
+        if len(sources) >= cfg.research_max_sources:
+            break
+
+    seen_statements: set[str] = set()
+    statements: list[str] = []
+    for statement in primary.candidate_statements + supplement.candidate_statements:
+        normalized = statement.strip().lower()
+        if not normalized or normalized in seen_statements:
+            continue
+        seen_statements.add(normalized)
+        statements.append(statement.strip())
+        if len(statements) >= cfg.research_statement_limit:
+            break
+
+    focus_terms = []
+    for item in primary.focus_terms + supplement.focus_terms:
+        cleaned = item.strip()
+        if cleaned and cleaned not in focus_terms:
+            focus_terms.append(cleaned)
+
+    return ResearchPacket(
+        query=primary.query or supplement.query,
+        focus_terms=focus_terms,
+        sources=sources,
+        candidate_statements=statements,
+    )
+
+
 # ── Phase 1: Gather ────────────────────────────────────────────────────────
 
 async def phase_gather(
@@ -83,6 +184,7 @@ async def phase_gather(
     medium: MediumAgent,
     small: SmallAgent,
     cfg: DreamConfig,
+    memory_store: Any = None,
 ) -> list[str]:
     """
     All three agents generate factual statements about the topic.
@@ -93,6 +195,15 @@ async def phase_gather(
     logger.info("[gather] starting — topic=%s, subtopics=%s", topic, memory.subtopics[:3])
     t0 = time.perf_counter()
     packet = await _research_packet(topic, memory, cfg)
+    stored_packet = _stored_research_packet(topic, memory, cfg, memory_store) if cfg.research_enabled else None
+    packet = _merge_research_packets(packet, stored_packet, cfg)
+    if packet:
+        memory.set_research(
+            query=packet.query,
+            focus_terms=packet.focus_terms,
+            sources=[source.as_dict() for source in packet.sources],
+            candidate_statements=packet.candidate_statements,
+        )
     evidence = packet.evidence_block(cfg.research_max_context_chars) if packet else ""
     sourced_statements = packet.candidate_statements if packet else []
     if packet:

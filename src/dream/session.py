@@ -240,7 +240,15 @@ class DreamSession:
 
         # ── Phase 1: Gather ────────────────────────────────────────────────
         self._ui_set_phase("Gather", "running", "Collecting candidate statements")
-        raw_statements = await phase_gather(topic, memory, cloud, medium, small, cfg)
+        raw_statements = await phase_gather(
+            topic,
+            memory,
+            cloud,
+            medium,
+            small,
+            cfg,
+            memory_store=self.memory_store,
+        )
         self._persist_research_sources()
         self._ui_complete_phase("Gather", f"Collected {len(raw_statements)} candidate statements.")
 

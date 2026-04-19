@@ -193,6 +193,10 @@ class MemoryStore:
                 CREATE INDEX IF NOT EXISTS idx_knowledge_entries_search
                 ON knowledge_entries USING GIN(search_vector)
             """)
+            cur.execute("""
+                CREATE INDEX IF NOT EXISTS idx_knowledge_entries_metadata
+                ON knowledge_entries USING GIN(metadata)
+            """)
 
     @contextmanager
     def _get_cursor(self):
@@ -473,6 +477,45 @@ class MemoryStore:
             cur.execute(sql, tuple(params))
             return [dict(row) for row in cur.fetchall()]
 
+    def list_knowledge(
+        self,
+        limit: int = 10,
+        category: Optional[str] = None,
+        session_id: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> List[Dict[str, Any]]:
+        """List recent knowledge rows, optionally filtered by category/session/metadata."""
+        if self._use_file_fallback:
+            return self._file_list_knowledge(limit, category, session_id, metadata)
+
+        filters = []
+        params: List[Any] = []
+        if category:
+            filters.append("category = %s")
+            params.append(category)
+        if session_id:
+            filters.append("session_id = %s")
+            params.append(session_id)
+        if metadata:
+            filters.append("metadata @> %s")
+            params.append(Json(metadata))
+
+        where_clause = ""
+        if filters:
+            where_clause = "WHERE " + " AND ".join(filters)
+
+        sql = f"""
+            SELECT key, content, source, category, session_id, metadata, updated_at
+            FROM knowledge_entries
+            {where_clause}
+            ORDER BY updated_at DESC
+            LIMIT %s
+        """
+        params.append(limit)
+        with self._get_cursor() as cur:
+            cur.execute(sql, tuple(params))
+            return [dict(row) for row in cur.fetchall()]
+
     def count_knowledge_entries(self, category: Optional[str] = None) -> int:
         """Count stored knowledge rows."""
         if self._use_file_fallback:
@@ -687,6 +730,30 @@ class MemoryStore:
                     "key": key,
                     **item,
                 })
+        rows.sort(key=lambda row: row.get("updated_at", ""), reverse=True)
+        return rows[:limit]
+
+    def _file_list_knowledge(
+        self,
+        limit: int = 10,
+        category: Optional[str] = None,
+        session_id: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> List[Dict[str, Any]]:
+        path = self._file_get_knowledge_path()
+        if not path.exists():
+            return []
+
+        rows = []
+        for key, item in json.loads(path.read_text()).items():
+            if category and item.get("category") != category:
+                continue
+            if session_id and item.get("session_id") != session_id:
+                continue
+            item_metadata = item.get("metadata", {}) or {}
+            if metadata and not all(item_metadata.get(name) == value for name, value in metadata.items()):
+                continue
+            rows.append({"key": key, **item})
         rows.sort(key=lambda row: row.get("updated_at", ""), reverse=True)
         return rows[:limit]
 

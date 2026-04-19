@@ -22,6 +22,7 @@ QwenCode is a terminal-first Qwen harness with a browser runner, a local helper 
 - **Dream loop** with live progress UI, session summaries, and PostgreSQL sync
 - **Default Dream research lane** that pulls fresh evidence from trusted internet sources and feeds it into Gather, Verify, Examine, and Adapt
 - **Reinforcement-style curriculum memory** that tracks which concepts and source domains are helping or hurting progress
+- **Dream source recall** that reuses prior trusted sources from PostgreSQL before falling back to the open web again
 - **Dream cloud fallback** to the local 4B lane when the remote orchestrator is unavailable or misconfigured
 - **Expanded toolset** for file reads, chunked file reads, shell, git, knowledge search, and Dream inspection
 - **Structured tool-result views** so diagnostics and memory hits land as UI instead of raw log text
@@ -251,6 +252,7 @@ Dream now writes:
 - `dream_source`
 
 Rows are keyed with the Dream session id so separate Dream runs on the same topic do not overwrite one another.
+Stored `dream_source` rows can also be recalled in later Dream runs for the same topic, so PostgreSQL acts as both a memory log and a reusable research cache.
 
 ## Dream mode
 

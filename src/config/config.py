@@ -42,6 +42,7 @@ DEFAULT_CONFIG = {
     "megakernel_model": MEGAKERNEL_MODEL,
     "megakernel_path": MEGAKERNEL_PATH,
     "audit_enabled": True,
+    "terminal_shell_enabled": True,
     "memory_backend": "auto",  # auto | postgresql | file
     "require_postgres": False,
     "memory_db_url": "",  # PostgreSQL URL, empty uses file-based storage
@@ -63,6 +64,7 @@ def load_config() -> dict:
         "local_format_enabled",
         "local_fast_enabled",
         "audit_enabled",
+        "terminal_shell_enabled",
         "require_postgres",
     }
     int_keys = {"max_tokens"}
@@ -83,6 +85,7 @@ def load_config() -> dict:
         ("MEGAKERNEL_PATH",   "megakernel_path"),
         ("LOCAL_FORMAT_ENABLED", "local_format_enabled"),
         ("AUDIT_ENABLED",     "audit_enabled"),
+        ("TERMINAL_SHELL_ENABLED", "terminal_shell_enabled"),
         ("MEMORY_BACKEND",    "memory_backend"),
         ("MEMORY_DB_URL",     "memory_db_url"),
         ("SESSION_ID",        "session_id"),

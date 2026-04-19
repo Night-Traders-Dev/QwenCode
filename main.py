@@ -1,7 +1,8 @@
-import src.qwencode
+from src.qwencode import main as qwencode_main
 
-def main():
-    print("Hello from qwencode!")
+
+def main() -> None:
+    qwencode_main()
 
 
 if __name__ == "__main__":

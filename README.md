@@ -7,8 +7,8 @@ QwenCode is a terminal-first Qwen harness with a browser runner, a local helper 
 - Runs in **API mode** or **browser mode**
 - Uses a **triple-model lane**
   - cloud/browser model for the main answer
-  - `qwen3.5:4b` for heavier local formatting and audits
-  - `qwen3.5:0.8b` for fast local gating and Dream verification
+  - the configured `LOCAL_MODEL` for heavier local formatting and audits
+  - the configured `LOCAL_FAST_MODEL` for fast local gating and Dream verification
 - Stores conversation, tool output, audits, and Dream knowledge in **PostgreSQL** or file fallback
 - Ships a **Home UI** and section navigation for workspace, models, memory, tools, and Dream
 - Renders answers more intelligently, including a **weather-style report view** for forecast-heavy responses
@@ -37,7 +37,7 @@ QwenCode is a terminal-first Qwen harness with a browser runner, a local helper 
 
 ### Prerequisites
 
-- Python 3.10+
+- Python 3.12+
 - Chrome or Chromium
 - Ollama for local models
 - PostgreSQL if you want durable multi-session memory
@@ -56,11 +56,22 @@ git submodule update --init --recursive
 
 ```bash
 uv sync
+playwright install chromium
 ```
 
-3. Pull the local models:
+3. Pull the local helper models you want to use.
+
+The checked-in defaults currently point both local helper lanes at:
 
 ```bash
+ollama pull hf.co/ermiaazarkhalili/LFM2.5-1.2B-SFT-Claude-Opus-Reasoning-Unsloth-GGUF:Q8_0
+```
+
+If you prefer the older split local stack from earlier versions of the repo, override it and pull:
+
+```bash
+export LOCAL_MODEL="qwen3.5:4b"
+export LOCAL_FAST_MODEL="qwen3.5:0.8b"
 ollama pull qwen3.5:4b
 ollama pull qwen3.5:0.8b
 ```
@@ -86,16 +97,20 @@ export MEMORY_DB_URL="postgresql://user:pass@localhost:5432/qwencode"
 ### API mode
 
 ```bash
+python main.py
+# or
 python src/qwencode.py
 ```
 
 ### Browser mode
 
 ```bash
+python main.py --browser
+# or
 python src/qwencode.py --browser
 ```
 
-Browser mode now launches a fullscreen shell by default:
+Browser mode launches a fullscreen shell by default:
 
 - permanent status bar at the top
 - permanent input at the bottom
@@ -103,11 +118,13 @@ Browser mode now launches a fullscreen shell by default:
 - queued prompts accepted while another task is running
 - model-specific thinking and review blocks that can be toggled with `F4`, `F5`, or `/think`
 
-Set `terminal_shell_enabled` to `false` in config if you need the legacy browser loop.
+Set `terminal_shell_enabled` to `false` in `~/.qwencode/config.json`, or export `TERMINAL_SHELL_ENABLED=false`, if you need the legacy browser loop.
 
 ### Headless browser mode
 
 ```bash
+python main.py --browser --headless
+# or
 python src/qwencode.py --browser --headless
 ```
 
@@ -132,6 +149,8 @@ Navigation commands:
 
 ## Slash commands
 
+`/think` is available in the fullscreen browser shell. The rest of the commands below are shared by the normal terminal flow unless noted.
+
 | Command | Description |
 |---|---|
 | `/help` | Show command help |
@@ -145,8 +164,8 @@ Navigation commands:
 | `/local <text>` | Send a prompt directly to the local model |
 | `/queue` | Show task queue status |
 | `/tokens` | Show token usage |
-| `/think` | List available thinking blocks |
-| `/think toggle <n|latest|all>` | Collapse or expand thinking blocks |
+| `/think` | List available thinking blocks in browser shell mode |
+| `/think toggle <n|latest|all>` | Collapse or expand browser-shell thinking blocks |
 | `/home` | Open the home dashboard |
 | `/go <section>` | Open a specific dashboard section |
 | `/exit` | Quit |
@@ -215,9 +234,9 @@ QwenCode uses a three-lane local/cloud setup:
 1. **Main cloud/browser lane**
    - cloud API model or Qwen web UI
 2. **Local audit / formatter lane**
-   - `qwen3.5:4b`
+   - `LOCAL_MODEL`
 3. **Fast local gate**
-   - `qwen3.5:0.8b`
+   - `LOCAL_FAST_MODEL`
 
 ### What the helper models do
 
@@ -227,9 +246,11 @@ QwenCode uses a three-lane local/cloud setup:
 - support Dream verification and grading
 - take over the Dream orchestrator role if the configured cloud key or endpoint fails
 
+The current checked-in defaults in [`src/config/config.py`](src/config/config.py) set both helper lanes to `hf.co/ermiaazarkhalili/LFM2.5-1.2B-SFT-Claude-Opus-Reasoning-Unsloth-GGUF:Q8_0`. Override `LOCAL_MODEL` and `LOCAL_FAST_MODEL` if you want a different local stack.
+
 ### MegaKernel / Mirage
 
-The repo includes the `third_party/mirage` submodule for MegaKernel-related probing. The fast helper still uses the Ollama path for `qwen3.5:0.8b` because the current upstream branch does not yet expose a Qwen 3.5-compatible builder for the intended fast path.
+The repo includes the `third_party/mirage` submodule for MegaKernel-related probing. The fast helper still uses the Ollama path for Qwen 3.5 model tags because the current upstream branch does not yet expose a Qwen 3.5-compatible builder for the intended fast path.
 
 ## Tools
 
@@ -379,12 +400,13 @@ Configuration is stored in `~/.qwencode/config.json`. Important environment vari
 | `QWEN_BASE_URL` | API base URL | DashScope compatible endpoint |
 | `QWEN_MODEL` | default cloud model | `qwen3-coder-plus` |
 | `LOCAL_ENABLED` | enable local helper model | `true` |
-| `LOCAL_MODEL` | heavier local helper | `qwen3.5:4b` |
+| `LOCAL_MODEL` | heavier local helper | `hf.co/ermiaazarkhalili/LFM2.5-1.2B-SFT-Claude-Opus-Reasoning-Unsloth-GGUF:Q8_0` |
 | `LOCAL_FAST_ENABLED` | enable fast helper lane | `true` |
-| `LOCAL_FAST_MODEL` | fast helper model | `qwen3.5:0.8b` |
+| `LOCAL_FAST_MODEL` | fast helper model | `hf.co/ermiaazarkhalili/LFM2.5-1.2B-SFT-Claude-Opus-Reasoning-Unsloth-GGUF:Q8_0` |
 | `LOCAL_FAST_BACKEND` | `auto`, `ollama`, or `megakernel` | `auto` |
 | `LOCAL_FORMAT_ENABLED` | enable local output reformatter | `false` |
 | `AUDIT_ENABLED` | enable local auditing | `true` |
+| `TERMINAL_SHELL_ENABLED` | use the fullscreen browser shell | `true` |
 | `MEMORY_BACKEND` | `auto`, `postgresql`, or `file` | `auto` |
 | `REQUIRE_POSTGRES` | fail instead of falling back | `false` |
 | `MEMORY_DB_URL` | PostgreSQL connection URL | unset |
@@ -428,9 +450,19 @@ src/
     └── task_tracker.py
 ```
 
+## Testing
+
+Run the project test suite with:
+
+```bash
+pytest -q
+```
+
+The pytest config is scoped to the repo's own `tests/` directory so vendored dependency suites under `deps/` and `third_party/` are not collected.
+
 ## Performance tips
 
-1. Keep `qwen3.5:4b` and `qwen3.5:0.8b` loaded locally.
+1. Keep your configured local helper models loaded locally.
 2. Use browser headless mode after login is stable.
 3. Prefer PostgreSQL once memory volume grows.
 4. Let the fast helper lane clear easy answers before escalating to deeper audits.
@@ -446,6 +478,12 @@ src/
 ### Local models
 
 - If the local models are missing, run:
+
+```bash
+ollama pull hf.co/ermiaazarkhalili/LFM2.5-1.2B-SFT-Claude-Opus-Reasoning-Unsloth-GGUF:Q8_0
+```
+
+- If you override to the older split local stack, also pull:
 
 ```bash
 ollama pull qwen3.5:4b

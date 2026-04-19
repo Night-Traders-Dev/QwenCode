@@ -1,7 +1,7 @@
 [project]
 name = "qwencode"
 version = "0.1.0"
-description = "Add your description here"
+description = "Terminal-first Qwen harness with browser automation, Dream training, and durable memory."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -12,3 +12,6 @@ dependencies = [
     "prompt-toolkit>=3.0.52",
     "rich>=14.3.1",
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

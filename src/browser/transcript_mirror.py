@@ -1,6 +1,7 @@
 import re
 import time
 import asyncio
+import inspect
 from ui.live_render import LiveRenderer
 
 
@@ -332,6 +333,7 @@ class BrowserTranscriptMirror:
         answer_stable_seconds: float = 0.80,
         post_thinking_grace_seconds: float = 0.40,
         render_output: bool = True,
+        progress_callback=None,
     ) -> str:
         renderer.reset()
         start = time.monotonic()
@@ -375,6 +377,10 @@ class BrowserTranscriptMirror:
                         thinking_done=state["thinking_done"],
                     )
                     last_answer_len = len(state["answer_text"])
+                    if progress_callback is not None:
+                        result = progress_callback(dict(state))
+                        if inspect.isawaitable(result):
+                            await result
 
                 if changed:
                     last_change = now
@@ -398,4 +404,8 @@ class BrowserTranscriptMirror:
             await asyncio.sleep(poll_interval)
 
         renderer.finish(render_output=render_output)
+        if progress_callback is not None:
+            result = progress_callback(dict(last))
+            if inspect.isawaitable(result):
+                await result
         return renderer.answer_text or renderer.thinking_text

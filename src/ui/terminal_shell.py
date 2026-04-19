@@ -9,6 +9,7 @@ import asyncio
 import time
 from contextlib import suppress
 from datetime import datetime
+from typing import Any
 
 from prompt_toolkit.application import Application
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
@@ -16,7 +17,6 @@ from prompt_toolkit.document import Document
 from prompt_toolkit.history import FileHistory
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.layout import HSplit, Layout, Window
-from prompt_toolkit.layout.controls import FormattedTextControl
 from prompt_toolkit.styles import Style
 from prompt_toolkit.widgets import TextArea
 
@@ -38,6 +38,10 @@ class TerminalShell:
         self._output_text = ""
         self._max_output_chars = 240_000
         self._input_queue: asyncio.Queue[str] = asyncio.Queue()
+        self._output_items: list[dict[str, Any]] = []
+        self._block_lookup: dict[str, dict[str, Any]] = {}
+        self._block_counter = 0
+        self._latest_block_id: str | None = None
 
         self.output_area = TextArea(
             text="",
@@ -57,23 +61,31 @@ class TerminalShell:
             auto_suggest=AutoSuggestFromHistory(),
             style="class:input-field",
         )
-        self.status_window = Window(
-            content=FormattedTextControl(self._status_fragments),
+        self.status_area = TextArea(
+            text="",
+            read_only=True,
+            multiline=True,
+            wrap_lines=False,
             height=3,
+            focusable=False,
             style="class:statusbar",
         )
-        self.input_header = Window(
-            content=FormattedTextControl(self._input_fragments),
+        self.input_header = TextArea(
+            text="",
+            read_only=True,
+            multiline=False,
+            wrap_lines=False,
             height=1,
+            focusable=False,
             style="class:input-header",
         )
 
         body = HSplit(
             [
-                self.status_window,
-                Window(height=1, char="─", style="class:divider"),
+                self.status_area,
+                Window(height=1, char=" ", style="class:divider"),
                 self.output_area,
-                Window(height=1, char="─", style="class:divider"),
+                Window(height=1, char=" ", style="class:divider"),
                 self.input_header,
                 self.input_area,
             ]
@@ -86,25 +98,15 @@ class TerminalShell:
             mouse_support=True,
             style=self._build_style(),
         )
+        self._refresh_chrome()
 
     def _build_style(self) -> Style:
         return Style.from_dict(
             {
                 "statusbar": "bg:#111827 #e5e7eb",
-                "status.title": "bg:#111827 #5ba3f5 bold",
-                "status.mode": "bg:#111827 #a78bfa bold",
-                "status.ok": "bg:#111827 #4ade80 bold",
-                "status.warn": "bg:#111827 #fbbf24 bold",
-                "status.err": "bg:#111827 #f87171 bold",
-                "status.meta": "bg:#111827 #9ca3af",
-                "status.detail": "bg:#111827 #e5e7eb",
-                "status.prompt": "bg:#111827 #cbd5e1",
-                "divider": "#334155",
+                "divider": "bg:#1e1b4b",
                 "output": "bg:#151a2d #e5e7eb",
                 "input-header": "bg:#0f172a #94a3b8",
-                "input.label": "bg:#0f172a #5ba3f5 bold",
-                "input.help": "bg:#0f172a #94a3b8",
-                "input.model": "bg:#0f172a #34d399",
                 "input-field": "bg:#0b1020 #e5e7eb",
             }
         )
@@ -123,6 +125,14 @@ class TerminalShell:
         @kb.add("c-d")
         def _exit(_event) -> None:
             self.exit()
+
+        @kb.add("f4")
+        def _toggle_latest(_event) -> None:
+            self.toggle_latest_block(reasoning_only=True)
+
+        @kb.add("f5")
+        def _toggle_all(_event) -> None:
+            self.toggle_all_blocks(reasoning_only=True)
 
         return kb
 
@@ -144,51 +154,35 @@ class TerminalShell:
         seconds = int(elapsed % 60)
         return f"{minutes}m {seconds:02d}s"
 
-    def _status_style(self) -> str:
-        if self.state == "completed":
-            return "class:status.ok"
-        if self.state == "failed":
-            return "class:status.err"
-        if self.state in {"running", "auditing"}:
-            return "class:status.warn"
-        return "class:status.mode"
-
-    def _status_fragments(self):
+    def _status_text(self) -> str:
         queue_depth = self._input_queue.qsize()
         clock = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        detail = self._trim(self.detail or "Connected and ready.", 150)
-        current = self._trim(self.current_prompt or "Waiting for input", 150)
-        return [
-            ("class:status.title", " QwenCode "),
-            ("class:status.mode", f" {self.mode.upper()} "),
-            (self._status_style(), f" {self.state.upper()} "),
-            (
-                "class:status.meta",
-                f" Stage {self.stage or 'ready'} | Queue {queue_depth} | Main {self.main_tokens:,} | Local {self.local_tokens:,} | {self._format_elapsed()} | {clock}",
-            ),
-            ("", "\n"),
-            ("class:status.detail", f" {detail}"),
-            ("", "\n"),
-            ("class:status.meta", " Current "),
-            ("class:status.prompt", f" {current}"),
-        ]
+        headline = self._trim(
+            f"QwenCode | {self.mode.upper()} | {self.state.upper()} | Stage {self.stage or 'ready'} | Queue {queue_depth} | Main {self.main_tokens:,} | Local {self.local_tokens:,} | {self._format_elapsed()} | {clock}",
+            160,
+        )
+        detail = self._trim(self.detail or "Connected and ready.", 160)
+        current = self._trim(f"Current: {self.current_prompt or 'Waiting for input'}", 160)
+        return "\n".join([headline, detail, current])
 
-    def _input_fragments(self):
-        model_text = self._trim(self.model_summary, 90) if self.model_summary else ""
-        fragments = [
-            ("class:input.label", " Input "),
-            ("class:input.help", " Enter to send  Ctrl-L clear  Ctrl-D exit "),
-        ]
-        if model_text:
-            fragments.extend(
-                [
-                    ("class:input.help", "| "),
-                    ("class:input.model", model_text),
-                ]
-            )
-        return fragments
+    def _input_header_text(self) -> str:
+        line = "Input | Enter send | Ctrl-L clear | F4 latest think | F5 all think | Ctrl-D exit"
+        if self.model_summary:
+            line += f" | {self.model_summary}"
+        return self._trim(line, 170)
+
+    def _refresh_text_area(self, area: TextArea, text: str) -> None:
+        area.buffer.set_document(
+            Document(text=text, cursor_position=0),
+            bypass_readonly=True,
+        )
+
+    def _refresh_chrome(self) -> None:
+        self._refresh_text_area(self.status_area, self._status_text())
+        self._refresh_text_area(self.input_header, self._input_header_text())
 
     def invalidate(self) -> None:
+        self._refresh_chrome()
         try:
             self.app.invalidate()
         except Exception:
@@ -204,22 +198,158 @@ class TerminalShell:
         self.invalidate()
 
     def clear_output(self) -> None:
+        self._output_items = []
+        self._block_lookup = {}
+        self._block_counter = 0
+        self._latest_block_id = None
         self._set_output_text("")
 
     def append_output(self, text: str) -> None:
         if not text:
             return
-        normalized = text.rstrip() + "\n"
-        if self._output_text:
-            combined = self._output_text.rstrip() + "\n\n" + normalized
-        else:
-            combined = normalized
-        self._set_output_text(combined)
+        self.append_entry("Output", text)
 
     def append_entry(self, label: str, text: str) -> None:
         stamp = datetime.now().strftime("%H:%M:%S")
-        heading = f"{label.upper()} [{stamp}]"
-        self.append_output(f"{heading}\n{text.strip()}")
+        self._output_items.append(
+            {
+                "kind": "entry",
+                "label": label.upper(),
+                "timestamp": stamp,
+                "text": (text or "").strip(),
+            }
+        )
+        self._rebuild_output()
+
+    def upsert_block(
+        self,
+        block_id: str,
+        *,
+        title: str,
+        text: str,
+        status: str = "ready",
+        collapsed: bool | None = None,
+        reasoning: bool = False,
+    ) -> None:
+        existing = self._block_lookup.get(block_id)
+        if existing is None:
+            self._block_counter += 1
+            existing = {
+                "kind": "block",
+                "block_id": block_id,
+                "display_index": self._block_counter,
+                "title": title,
+                "text": "",
+                "status": status,
+                "collapsed": True if collapsed is None else bool(collapsed),
+                "reasoning": reasoning,
+                "timestamp": datetime.now().strftime("%H:%M:%S"),
+            }
+            self._block_lookup[block_id] = existing
+            self._output_items.append(existing)
+        else:
+            existing["title"] = title
+            existing["status"] = status
+            if collapsed is not None:
+                existing["collapsed"] = bool(collapsed)
+        existing["text"] = (text or "").strip()
+        existing["reasoning"] = reasoning
+        self._latest_block_id = block_id
+        self._rebuild_output()
+
+    def toggle_latest_block(self, reasoning_only: bool = False) -> bool:
+        blocks = [
+            item for item in self._output_items
+            if item.get("kind") == "block" and (not reasoning_only or item.get("reasoning"))
+        ]
+        if not blocks:
+            return False
+        target = blocks[-1]
+        target["collapsed"] = not bool(target.get("collapsed", True))
+        self._latest_block_id = target["block_id"]
+        self._rebuild_output()
+        return True
+
+    def toggle_all_blocks(self, reasoning_only: bool = False) -> int:
+        blocks = [
+            item for item in self._output_items
+            if item.get("kind") == "block" and (not reasoning_only or item.get("reasoning"))
+        ]
+        if not blocks:
+            return 0
+        should_expand = any(item.get("collapsed", True) for item in blocks)
+        for item in blocks:
+            item["collapsed"] = False if should_expand else True
+        self._rebuild_output()
+        return len(blocks)
+
+    def toggle_block(self, selector: str, reasoning_only: bool = False) -> bool:
+        normalized = (selector or "").strip().lower()
+        if normalized in {"", "latest"}:
+            return self.toggle_latest_block(reasoning_only=reasoning_only)
+        if normalized == "all":
+            return bool(self.toggle_all_blocks(reasoning_only=reasoning_only))
+        for item in self._output_items:
+            if item.get("kind") != "block":
+                continue
+            if reasoning_only and not item.get("reasoning"):
+                continue
+            if normalized == str(item.get("display_index")) or normalized == str(item.get("block_id", "")).lower():
+                item["collapsed"] = not bool(item.get("collapsed", True))
+                self._latest_block_id = item["block_id"]
+                self._rebuild_output()
+                return True
+        return False
+
+    def describe_blocks(self, reasoning_only: bool = False) -> str:
+        blocks = [
+            item for item in self._output_items
+            if item.get("kind") == "block" and (not reasoning_only or item.get("reasoning"))
+        ]
+        if not blocks:
+            return "No model thinking blocks available yet."
+        lines = ["Model thinking blocks"]
+        for item in blocks:
+            state = "collapsed" if item.get("collapsed", True) else "expanded"
+            lines.append(
+                f"- {item['display_index']}: {item['title']} [{item.get('status', 'ready')}, {state}]"
+            )
+        lines.append("Use /think toggle <n>, /think toggle latest, or /think toggle all.")
+        return "\n".join(lines)
+
+    def _block_preview(self, text: str, limit: int = 180) -> str:
+        preview = " ".join((text or "").split())
+        if not preview:
+            return "(waiting for model output)"
+        if len(preview) <= limit:
+            return preview
+        return preview[: limit - 3].rstrip() + "..."
+
+    def _render_output(self) -> str:
+        lines: list[str] = []
+        for item in self._output_items:
+            if lines:
+                lines.append("")
+            if item.get("kind") == "entry":
+                lines.append(f"{item['label']} [{item['timestamp']}]")
+                if item.get("text"):
+                    lines.extend((item["text"] or "").splitlines())
+                continue
+
+            marker = "[+]" if item.get("collapsed", True) else "[-]"
+            lines.append(
+                f"{marker} [{item['display_index']}] {item['title']} [{str(item.get('status', 'ready')).upper()}]"
+            )
+            text = (item.get("text") or "").strip()
+            if item.get("collapsed", True):
+                lines.append(f"    {self._block_preview(text)}")
+            else:
+                expanded_lines = text.splitlines() if text else ["(waiting for model output)"]
+                lines.extend(f"    {line}" if line else "" for line in expanded_lines)
+        return "\n".join(lines).strip()
+
+    def _rebuild_output(self) -> None:
+        self._set_output_text(self._render_output())
 
     def submit_current_input(self) -> None:
         text = (self.input_area.text or "").strip()

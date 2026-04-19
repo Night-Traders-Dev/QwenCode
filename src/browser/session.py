@@ -44,6 +44,56 @@ def _clip(text: str, limit: int = 140) -> str:
     return normalized[: limit - 3].rstrip() + "..."
 
 
+def _format_formatter_pass(model: str, raw_text: str, formatted_text: str) -> str:
+    changed = (formatted_text or "").strip() != (raw_text or "").strip()
+    lines = [
+        f"Model: {model}",
+        f"Changed output: {'yes' if changed else 'no'}",
+        f"Raw chars: {len(raw_text or '')}",
+        f"Formatted chars: {len(formatted_text or '')}",
+    ]
+    preview = formatted_text if changed else raw_text
+    if preview:
+        lines.extend(["", "Preview", _clip(preview, 500)])
+    return "\n".join(lines)
+
+
+def _format_fast_review(audit: dict) -> str:
+    lines = [
+        f"Model: {audit.get('model', 'unknown')}",
+        f"Backend: {audit.get('backend', 'unknown')}",
+        f"Score: {audit.get('score', 'n/a')}/10",
+        f"Escalate: {'yes' if audit.get('escalate') else 'no'}",
+    ]
+    if audit.get("summary"):
+        lines.append(f"Summary: {audit['summary']}")
+    if audit.get("factual_risk") is not None:
+        lines.append(f"Factual risk: {'yes' if audit.get('factual_risk') else 'no'}")
+    issues = audit.get("issues") or []
+    if issues:
+        lines.extend(["", "Issues"] + [f"- {item}" for item in issues])
+    return "\n".join(lines)
+
+
+def _format_local_audit(audit: dict) -> str:
+    lines = [f"Score: {audit.get('score', 'n/a')}/10"]
+    strengths = audit.get("strengths") or []
+    weaknesses = audit.get("weaknesses") or []
+    recommendations = audit.get("recommendations") or []
+    factual_claims = audit.get("factual_claims") or []
+    if strengths:
+        lines.extend(["", "Strengths"] + [f"- {item}" for item in strengths])
+    if weaknesses:
+        lines.extend(["", "Weaknesses"] + [f"- {item}" for item in weaknesses])
+    if recommendations:
+        lines.extend(["", "Recommendations"] + [f"- {item}" for item in recommendations])
+    if factual_claims:
+        lines.extend(["", "Claims To Verify"] + [f"- {item}" for item in factual_claims])
+    if audit.get("fast_gate"):
+        lines.extend(["", "Fast Gate", _format_fast_review(audit["fast_gate"])])
+    return "\n".join(lines)
+
+
 def _shell_section_text(section: str, cfg: dict, memory_store=None, memory_status: dict | None = None) -> str:
     section = (section or "home").strip().lower()
     assets = discover_dream_assets(Path.cwd())
@@ -159,6 +209,8 @@ def _shell_help_text() -> str:
             "- /dream",
             "- /queue",
             "- /tokens",
+            "- /think",
+            "- /think toggle <n|latest|all>",
             "- /local <prompt>",
             "- /clear",
             "- /exit",
@@ -259,6 +311,25 @@ async def _handle_shell_command(
         )
         return True
 
+    if verb == "/think":
+        if not arg:
+            shell.append_entry("System", shell.describe_blocks(reasoning_only=True))
+            return True
+        think_parts = arg.split(maxsplit=1)
+        action = think_parts[0].lower()
+        target = think_parts[1] if len(think_parts) > 1 else "latest"
+        if action in {"list", "show"}:
+            shell.append_entry("System", shell.describe_blocks(reasoning_only=True))
+            return True
+        if action == "toggle":
+            if shell.toggle_block(target, reasoning_only=True):
+                shell.append_entry("System", f"Toggled thinking block: {target}")
+            else:
+                shell.append_entry("System", f"Could not find thinking block: {target}")
+            return True
+        shell.append_entry("System", "Usage: /think, /think list, or /think toggle <n|latest|all>")
+        return True
+
     if verb == "/local":
         if not arg:
             shell.append_entry("System", "Usage: /local <prompt>")
@@ -332,6 +403,16 @@ async def _browser_session_shell(
         assistant_tokens = 0
         local_tokens_used = 0
         warmup_tasks = []
+        cloud_block_id = f"{task_id}:cloud"
+        formatter_block_id = f"{task_id}:formatter"
+        fast_block_id = f"{task_id}:fast"
+        audit_block_id = f"{task_id}:audit"
+        cloud_state = {
+            "thinking_text": "",
+            "answer_text": "",
+            "thinking_done": False,
+            "busy": False,
+        }
 
         if local_llm_client:
             warmup_tasks.append(asyncio.create_task(asyncio.to_thread(local_llm_client.warmup)))
@@ -346,6 +427,14 @@ async def _browser_session_shell(
             main_tokens=0,
             local_tokens=0,
             reset_timer=True,
+        )
+        shell.upsert_block(
+            cloud_block_id,
+            title=f"Cloud thinking | {cfg.get('model', 'qwen-coder (web)')}",
+            text="Waiting for the browser model to expose its reasoning.",
+            status="running",
+            collapsed=True,
+            reasoning=True,
         )
 
         if memory_store:
@@ -367,14 +456,46 @@ async def _browser_session_shell(
             mode="browser",
         )
 
+        async def on_cloud_progress(state: dict) -> None:
+            cloud_state.update(state or {})
+            thinking_text = (cloud_state.get("thinking_text") or "").strip()
+            answer_preview = (cloud_state.get("answer_text") or "").strip()
+            body_parts = []
+            if thinking_text:
+                body_parts.append(thinking_text)
+            if answer_preview:
+                body_parts.extend(["", "Draft answer preview", _clip(answer_preview, 500)])
+            status = "complete" if (cloud_state.get("thinking_done") or not cloud_state.get("busy")) else "running"
+            shell.upsert_block(
+                cloud_block_id,
+                title=f"Cloud thinking | {cfg.get('model', 'qwen-coder (web)')}",
+                text="\n".join(part for part in body_parts if part is not None) or "Waiting for the browser model to expose its reasoning.",
+                status=status,
+                collapsed=True,
+                reasoning=True,
+            )
+
         shell.update_status(state="running", stage="cloud", detail="Waiting on Qwen web.")
         result_text, tool_history = await controller.send_prompt_and_get_response(
             model_prompt,
             render_output=False,
+            progress_callback=on_cloud_progress,
         )
         raw_response = result_text or ""
         if raw_response:
             assistant_tokens = max(1, len(raw_response) // 4)
+        shell.upsert_block(
+            cloud_block_id,
+            title=f"Cloud thinking | {cfg.get('model', 'qwen-coder (web)')}",
+            text=(
+                ((cloud_state.get("thinking_text") or "").strip() + "\n\n") if (cloud_state.get("thinking_text") or "").strip() else ""
+            )
+            + "Draft answer preview\n"
+            + _clip((cloud_state.get("answer_text") or raw_response or "No answer preview was captured."), 500),
+            status="complete",
+            collapsed=True,
+            reasoning=True,
+        )
         shell.update_status(main_tokens=assistant_tokens, stage="review", detail="Reviewing and formatting the draft.")
 
         if warmup_tasks:
@@ -391,6 +512,14 @@ async def _browser_session_shell(
             if (formatted or "").strip():
                 formatted_result = formatted
                 local_tokens_used += max(1, len(formatted_result) // 4)
+            shell.upsert_block(
+                formatter_block_id,
+                title=f"Formatter pass | {local_llm_client.model}",
+                text=_format_formatter_pass(local_llm_client.model, raw_response, formatted_result),
+                status="complete",
+                collapsed=True,
+                reasoning=True,
+            )
 
         quick_audit = None
         if formatted_result and fast_llm_client and fast_llm_client.is_available():
@@ -402,6 +531,14 @@ async def _browser_session_shell(
             )
             audit_details = quick_audit
             local_tokens_used += max(1, len(json.dumps(quick_audit)) // 4)
+            shell.upsert_block(
+                fast_block_id,
+                title=f"Fast review | {fast_llm_client.model}",
+                text=_format_fast_review(quick_audit),
+                status="complete",
+                collapsed=True,
+                reasoning=True,
+            )
 
         if (
             formatted_result
@@ -422,6 +559,14 @@ async def _browser_session_shell(
                 audit_result["fast_gate"] = quick_audit
             audit_details = audit_result
             local_tokens_used += max(1, len(json.dumps(audit_result)) // 4)
+            shell.upsert_block(
+                audit_block_id,
+                title=f"Local audit | {local_llm_client.model}",
+                text=_format_local_audit(audit_result),
+                status="complete",
+                collapsed=True,
+                reasoning=True,
+            )
 
         final_result = (formatted_result or raw_response or "").strip()
         if not final_result:

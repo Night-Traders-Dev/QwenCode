@@ -101,6 +101,7 @@ Browser mode now launches a fullscreen shell by default:
 - permanent input at the bottom
 - rendered answers in the middle
 - queued prompts accepted while another task is running
+- model-specific thinking and review blocks that can be toggled with `F4`, `F5`, or `/think`
 
 Set `terminal_shell_enabled` to `false` in config if you need the legacy browser loop.
 
@@ -144,6 +145,8 @@ Navigation commands:
 | `/local <text>` | Send a prompt directly to the local model |
 | `/queue` | Show task queue status |
 | `/tokens` | Show token usage |
+| `/think` | List available thinking blocks |
+| `/think toggle <n|latest|all>` | Collapse or expand thinking blocks |
 | `/home` | Open the home dashboard |
 | `/go <section>` | Open a specific dashboard section |
 | `/exit` | Quit |

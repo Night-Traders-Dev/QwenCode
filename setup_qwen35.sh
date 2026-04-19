@@ -91,24 +91,24 @@ print_success "Dependencies setup complete"
 
 # Step 3: Install Python dependencies
 print_info "Step 3: Installing Python dependencies..."
-pip install --upgrade pip
-pip install cmake cython z3-solver==4.16 torch numpy graphviz tqdm protobuf
+pip install --upgrade pip --break-system-packages
+pip install cmake cython z3-solver==4.16 torch numpy graphviz tqdm protobuf --break-system-packages
 
 # Install transformers with specific version for Qwen3.5 compatibility
-pip install "transformers>=4.57.1" accelerate==1.8.0
+pip install "transformers>=4.57.1" accelerate==1.8.0 --break-system-packages
 
 # Install tg4perfetto
-pip install "tg4perfetto @ git+https://github.com/flashinfer-ai/tg4perfetto.git"
+pip install "tg4perfetto @ git+https://github.com/flashinfer-ai/tg4perfetto.git" --break-system-packages    
 
 # Install cuda-python if available
-pip install cuda-python 2>/dev/null || print_warning "cuda-python installation failed (optional)"
+pip install cuda-python --break-system-packages 2>/dev/null || print_warning "cuda-python installation failed (optional)"
 
 print_success "Python dependencies installed"
 
 # Step 4: Build and install Mirage
 print_info "Step 4: Building and installing Mirage..."
 cd "$SCRIPT_DIR/third_party/mirage"
-pip install -e . -v
+pip install -e . -v --break-system-packages
 
 if [ $? -eq 0 ]; then
     print_success "Mirage installed successfully"

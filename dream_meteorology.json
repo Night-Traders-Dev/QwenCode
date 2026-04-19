@@ -1,57 +1,177 @@
 {
   "topic": "meteorology",
   "subtopics": [
-    "Atmospheric layers structure",
-    "Weather formation processes",
-    "Pressure systems dynamics",
-    "Weather front interactions",
-    "Severe storm prediction",
-    "Climate vs weather differences"
+    "Atmospheric conditions",
+    "Weather patterns",
+    "Climatological cycles",
+    "Seasonal variations",
+    "Orographic effects",
+    "Hydrological processes"
   ],
   "knowledge_base": [
     "Meteorology is the scientific study of the Earth's atmosphere and short-term atmospheric phenomena, with a focus on weather forecasting.",
     "It has applications in the military, aviation, energy production, transport, agriculture, construction, weather warnings, and disaster management.",
-    "This textbook serves as an introduction to atmospheric science for undergraduate students and is the primary textbook for the ATMO 200: Atmospheric Processes and Phenomenon course at the University of Hawai\u2019i at M\u0101noa.",
-    "The book covers basic atmospheric science, weather, and climate in a descriptive and quantitative way.",
-    "<p><b><i>Introduction to Earth Science, Second Edition</i></b> is an open textbook designed to provide a comprehensive introduction to Earth Science that can be freely accessed online, read offline, printed, or purchased as a print-on-demand book.",
-    "These include a multitude of high-quality figures and images within each chapter that help to clarify key concepts.",
-    "Meteorology is the scientific study of the Earth's atmosphere and short-term atmospheric phenomena, with a primary focus on weather forecasting.",
-    "The field of meteorology has practical applications in military operations, aviation, energy production, transport, agriculture, construction, weather warnings, and disaster management.",
-    "Atmospheric science textbooks serve as primary resources for undergraduate students, covering basic atmospheric science, weather, and climate in both descriptive and quantitative ways.",
-    "High-quality figures and images are frequently included in introductory Earth Science texts to clarify key concepts and enhance the student learning experience.",
-    "Meteorology is the scientific study of the Earth's atmosphere with a primary focus on short-term atmospheric phenomena and weather forecasting.",
-    "Atmospheric science involves understanding the structure of atmospheric layers and the dynamics of pressure systems to explain weather formation processes.",
-    "A concrete example of a weather phenomenon studied in meteorology is the interaction between cold and warm air masses at weather fronts, which often leads to severe storms.",
-    "A common misconception corrected in atmospheric science is the belief that climate and weather are the same, whereas climate refers to long-term average conditions while weather describes short-term variability.",
-    "The applications of meteorology include critical fields such as aviation safety, agriculture, and disaster management through accurate weather warnings.",
-    "This textbook serves as an introduction to atmospheric science for undergraduate students and is the primary textbook for the ATMO 200: Atmospheric Processes and Phenomenon course at the University of Hawai\u02bbi at M\u0101noa.",
-    "The text includes various important features designed to enhance the student learning experience in introductory Earth Science courses, such as high-quality figures and images within each chapter.",
-    "The field of meteorology has significant applications in military operations, aviation safety, energy production, agriculture, construction, weather warnings, and disaster management.",
-    "Atmospheric science textbooks such as those from the University of Hawai'i at M\u0101noa provide quantitative introductions to atmospheric processes and phenomena for undergraduate students.",
-    "Introductory Earth Science textbooks often include high-quality figures and images to clarify key concepts related to meteorology.",
-    "Self-test assessment questions are a common feature in open-access Earth Science textbooks designed to enhance student learning experiences.",
-    "Meteorology is the scientific study focused specifically on the Earth's atmosphere and short-term atmospheric phenomena.",
-    "The field relies heavily on weather forecasting and has critical applications in sectors such as aviation, agriculture, and disaster management.",
-    "Meteorological science investigates the differences between weather, which describes short-term conditions like a specific storm, and climate, which refers to long-term patterns.",
-    "A concrete example of a severe storm prediction involves tracking low-pressure systems to issue warnings for potential tornadoes or hurricanes before they make landfall.",
-    "A common misconception corrected in meteorology is that weather and climate are the same thing; in reality, climate is an average of weather conditions over a long period, not a single day's event.",
+    "Meteorology is an important component to air quality modeling.",
+    "This pages describe how CMAQ accounts for different meteorological processes, like radiation and cloud transport.",
+    "Climate, conditions of the atmosphere at a particular location over a long period of time; it is the long-term summation of the atmospheric elements (and their variations) that, over short time periods, constitute weather.",
+    "These elements are solar radiation, temperature, humidity, precipitation.",
+    "Showers and Thunderstorms for the Eastern Third of the Country; Fire Weather Concerns; Flooding Issues for the Great Lakes Region Showers and thunderstorms will continue along and ahead of a cold front for the eastern third of the country.",
+    "Meteorology is the scientific study of the Earth's atmosphere and short-term atmospheric phenomena, including weather forecasting and atmospheric processes.",
+    "The two primary focus areas of meteorology are atmospheric conditions and weather patterns.",
+    "Meteorology plays a crucial role in various human activities, including military operations, aviation, agriculture, and construction.",
+    "Meteorology is closely related to climatology, as both study atmospheric conditions but over different time scales\u2014weather focuses on short-term changes, while climate examines long-term atmospheric patterns.",
+    "Hydrological processes, such as precipitation and evaporation, are essential components of meteorology, affecting water availability and ecosystems.",
+    "Fact one: Meteorology is the scientific study of the Earth's atmosphere, focusing on weather forecasting and understanding atmospheric conditions.",
+    "Fact two: Atmospheric conditions include temperature, humidity, precipitation, and wind patterns, which directly influence weather and climate.",
+    "Fact four: Orographic effects occur when air masses are forced to rise over mountains, causing cooling and increased precipitation on the windward side.",
+    "Fact eight: Solar radiation is the primary energy source for the atmosphere and plays a critical role in weather and climate processes.",
     "Meteorology is the scientific study of the Earth's atmosphere and short-term atmospheric phenomena.",
-    "The field of meteorology has significant applications in military operations, aviation, energy production, transport, agriculture, construction, weather warnings, and disaster management.",
-    "Atmospheric science textbooks used in introductory courses cover basic atmospheric science, weather, and climate in both descriptive and quantitative ways.",
-    "Meteorology relies on high-quality figures and images to clarify key concepts in introductory Earth Science courses.",
-    "Self-test assessment questions are a featured component of open textbooks designed to enhance the student learning experience in introductory Earth Science courses.",
-    "It encompasses various applications including military operations, aviation safety, energy production, agriculture, and disaster management.",
-    "A common misconception is that meteorology is synonymous with climate science; however, meteorology specifically deals with day-to-day weather variations while climate studies long-term patterns.",
-    "Concrete example: Severe storm prediction involves analyzing pressure systems and weather front interactions to forecast immediate hazardous conditions like hurricanes or tornadoes.",
-    "The field relies on quantitative methods and data from sources such as the University of Hawai'i at M\u0101noa's ATMO 200 curriculum to understand atmospheric processes.",
-    "This textbook serves as an introduction to atmospheric science for undergraduate students and is the primary textbook for the ATMO 200: Atmospheric Processes and Phenomenon course at the University of Hawai'i at M\u0101noa."
+    "I need to know the difference between temperature and humidity, including their units and units of measurement.",
+    "I need to know the difference between wind speed and wind direction.",
+    "I need to know the difference between temperature and heat.",
+    "I need to know the difference between weather and climate.",
+    "I need to know the difference between wind and air pressure.",
+    "I need to know the difference between wind and rain.",
+    "I need to know the difference between temperature and humidity in Fahrenheit and Celsius.",
+    "I need to know the difference between high and low pressure systems.",
+    "I need to know the difference between a front and a high.",
+    "Meteorology is the scientific study of the Earth's atmosphere, focusing on atmospheric conditions and short-term phenomena.",
+    "Meteorology is the scientific study of Earth's atmosphere and weather forecasting.",
+    "Climatological cycles such as El Ni\u00f1o and La Ni\u00f1a influence global weather patterns.",
+    "Question 3 reveals a gap in understanding the classification criteria for climate zones.",
+    "Question 6 indicates a misunderstanding of the temperature range used to define desert boundaries.",
+    "Question 9 shows an incorrect association between the temperature range and the classification of a specific climate type.",
+    "Question 10 reveals a lack of recognition that the correct answer corresponds to a different climate zone.",
+    "Meteorology is the scientific study of Earth's atmosphere and short-term atmospheric phenomena, with a focus on weather forecasting.",
+    "Atmospheric conditions include temperature, humidity, pressure, and wind, which drive weather patterns.",
+    "Weather patterns are temporary, localized atmospheric conditions that change over short periods, typically hours to days.",
+    "Climate refers to long-term average weather patterns in a particular region, typically over decades or centuries.",
+    "Seasonal variations in meteorology are caused by the tilt of Earth's axis, resulting in changes in solar radiation received at different latitudes throughout the year.",
+    "The Earth's weather is determined by the uneven heating of the atmosphere by the Sun, with temperature differences between land and ocean creating air pressure gradients that drive wind.",
+    "In regions near the equator, the intense solar radiation heats the ground, causing air to rise and form convection currents that lead to thunderstorms and tropical rainforests.",
+    "Orographic effects occur when air is forced to rise over mountains, cooling and condensing to cause precipitation on the windward side, while the leeward side becomes drier.",
+    "Meteorology focuses on weather forecasting and atmospheric phenomena.",
+    "You struggled to identify which answer aligns with the correct meteorological concept of atmospheric instability.",
+    "Your reasoning regarding the order of events in a thunderstorm was incomplete.",
+    "You didn't recognize that the correct answer for a thunderstorm's cloud formation is 'cumulonimbus'.",
+    "You failed to match the correct classification of wind patterns during a tornado event.",
+    "You incorrectly thought that the correct answer for a hurricane's direction was 'clockwise' rather than 'counterclockwise' in the Northern Hemisphere.",
+    "Meteorology is the scientific study of the Earth's atmosphere and short-term atmospheric phenomena, focusing on weather forecasting.",
+    "Atmospheric conditions include pressure, temperature, humidity, and wind, all of which influence weather patterns.",
+    "Weather patterns are temporary, short-term atmospheric conditions, while climate refers to the long-term average of these patterns.",
+    "Climatological cycles, such as seasonal variations, are recurring patterns of temperature and precipitation changes over years.",
+    "Orographic effects, or orographic lifting, occur when moist air is forced to rise over mountains, leading to cloud formation and precipitation.",
+    "The Earth's atmosphere is composed of multiple layers (troposphere, stratosphere, mesosphere, thermosphere, exosphere), with the troposphere being the lowest layer where weather phenomena occur.",
+    "Orographic effects occur when air masses move over high topographic features like mountains, forcing air to rise, cool, condense, and form clouds or precipitation on the windward side.",
+    "The greenhouse effect is a natural process essential for maintaining Earth's habitable temperature, but human activities are accelerating it beyond safe levels.",
+    "The Coriolis effect is responsible for the Earth's characteristic wind patterns, including trade winds and westerlies, by deflecting moving air due to Earth's rotation.",
+    "The correct answer is B, but your choice was A.",
+    "You selected the wrong answer for Q1.",
+    "The correct answer is B, but your answer was A.",
+    "You chose the correct answer for Q3 but missed the option B.",
+    "Meteorology is the scientific study of Earth's atmosphere, focusing on weather patterns and forecasting short-term atmospheric phenomena.",
+    "Atmospheric conditions include temperature, humidity, pressure, and wind, all of which influence weather development.",
+    "Weather patterns are the daily weather conditions that result from interactions between air masses, including fronts, air masses, and weather systems.",
+    "Climatological cycles describe recurring seasonal changes in temperature, precipitation, and other climatic variables.",
+    "Orographic effects occur when air masses are forced to rise over mountains, leading to cooling, condensation, and precipitation on the windward side.",
+    "The Earth's climate zone is primarily determined by Earth's axial tilt (23.5 degrees).",
+    "The atmospheric circulation cells create consistent global wind patterns, such as the trade winds and westerlies.",
+    "The Hadley circulation is the dominant cell in the tropics, transporting warm air upward and forming rain shadows.",
+    "The Coriolis effect causes winds to curve to the right in the Northern Hemisphere and to the left in the Southern Hemisphere, influencing weather systems.",
+    "Meteorology has applications in military, aviation, energy production, agriculture, construction, and disaster management.",
+    "Atmospheric conditions such as temperature, pressure, and humidity are critical factors in weather forecasting.",
+    "The answer choices for question 1 should be B instead of A, indicating a misunderstanding of the correct response.",
+    "The answer choices for question 4 should be C instead of A, indicating a misunderstanding of the correct response.",
+    "The answer choices for question 5 should be B instead of A, indicating a misunderstanding of the correct response.",
+    "The answer choices for question 7 should be B instead of A, indicating a misunderstanding of the correct response.",
+    "The answer choices for question 8 should be B instead of A, indicating a misunderstanding of the correct response.",
+    "The answer choices for question 9 should be B instead of D, indicating a misunderstanding of the correct response.",
+    "The answer to question 1 is B, the correct answer should be B.",
+    "Meteorology is the scientific study of Earth's atmosphere and short-term atmospheric phenomena, including weather forecasting.",
+    "Atmospheric conditions in meteorology include temperature, humidity, pressure, and wind patterns.",
+    "Weather patterns are large-scale, recurring atmospheric phenomena such as high and low-pressure systems, fronts, and storm cells.",
+    "Climatological cycles, such as monsoons and El Ni\u00f1o-Southern Oscillation, describe long-term climate variations over decades to centuries.",
+    "Orographic effects occur when moist air is forced to rise over mountains, leading to cooling and precipitation on the windward side.",
+    "1",
+    "The correct answer (B) is based on a common misconception that meteorological phenomena are solely the result of human activity, whereas in reality these are primarily driven by natural atmospheric processes and solar energy.",
+    "The correct answer (B) is derived from the Coriolis effect, which explains how the rotation of the Earth influences wind direction and ocean currents, a phenomenon that is fundamentally different from human-induced weather changes.",
+    "The correct answer (B) is related to the Coriolis force, a force caused by the Earth's rotation that affects atmospheric winds and ocean currents, and it is not related to human activity.",
+    "The correct answer (B) is influenced by the Earth's rotation, which creates a directional shift in wind patterns, a natural phenomenon that has no direct connection to human influence.",
+    "The correct answer (B) is due to the Coriolis force, a force that arises from Earth's rotation and affects the paths of air and water masses, a natural process that is independent of human actions.",
+    "Meteorology is the scientific study of the Earth's atmosphere, focusing on weather prediction, atmospheric conditions, and short-term weather phenomena.",
+    "The field of meteorology involves analyzing atmospheric data to understand weather patterns, including the behavior of air masses, fronts, and pressure systems.",
+    "Meteorologists use instruments such as barometers, thermometers, anemometers, and hygrometers to collect atmospheric data for forecasting.",
+    "Weather patterns are influenced by factors like temperature differences, humidity, and the Earth's rotation, which affect wind and precipitation.",
+    "Climatological cycles, such as El Ni\u00f1o and La Ni\u00f1a, are large-scale patterns of atmospheric and oceanic changes that affect global weather and climate over years.",
+    "The average annual temperature at sea level is approximately 15\u00b0C (59\u00b0F), and this value can vary up to 10\u00b0C (18\u00b0F) depending on geographic location.",
+    "The jet stream, a high-altitude fast-moving air current, helps regulate Earth's climate by distributing heat from the equator to polar regions.",
+    "The Coriolis effect, caused by Earth's rotation, influences wind patterns and ocean currents, contributing to the formation of cyclones and anticyclones.",
+    "A common misconception is that the jet stream is a literal wind that blows directly west-to-east; it is actually a pattern in the upper atmosphere that influences weather systems.",
+    "The NASA GPM mission provides data for weather stations and weather forecasting.",
+    "The primary difference between weather and climate is that weather describes short-term atmospheric conditions (hours to days), while climate describes long-term average conditions (generations).",
+    "This distinction is crucial because weather can change rapidly, whereas climate provides the baseline conditions that influence ecosystems and human activities over decades.",
+    "The statement highlights an important scientific difference in terminology between the two concepts.",
+    "The correct answer is B: climate refers to the long-term average conditions, while weather refers to the short-term average conditions.",
+    "Meteorology is the scientific study of Earth's atmosphere, focusing on weather forecasting and atmospheric phenomena.",
+    "The NWS Storm Spotter Training Schedule for Spring 2026 provides training opportunities for students to become qualified storm spotters.",
+    "NASA's SPHEREx mission maps vast galactic ice regions, providing data on the distribution of water ice in the Milky Way.",
+    "The average last frost date for most temperate regions is typically in late March to early April in the United States.",
+    "Average annual rainfall in the contiguous United States is approximately 39 inches.",
+    "Weather is short-term atmospheric conditions, while climate is the long-term average of weather patterns over decades.",
+    "The Coriolis effect causes winds to curve as they move around the globe, leading to cyclonic and anticyclonic weather systems.",
+    "The jet stream is a fast-moving current of air high in the Earth's atmosphere that influences global weather patterns.",
+    "Meteorology involves the study of atmospheric conditions and weather patterns.",
+    "Meteorology is applied in fields such as aviation, agriculture, and disaster management.",
+    "The answer B is incorrect because the correct option is C.",
+    "The answer A is incorrect because the correct option is B.",
+    "The answer C is correct, not the answer A.",
+    "The answer D is incorrect, meaning the correct answer is not D.",
+    "The answer is C, but my confidence in this answer is low.",
+    "Atmospheric conditions are influenced by factors such as temperature, pressure, humidity, and wind patterns.",
+    "Weather patterns are defined by the arrangement of atmospheric elements like air masses, fronts, and pressure systems.",
+    "Climatological cycles refer to long-term climate patterns, such as the El Ni\u00f1o-Southern Oscillation and the North Atlantic Oscillation.",
+    "Seasonal variations in meteorology are driven by Earth's axial tilt, resulting in distinct seasons in different hemispheres.",
+    "The atmosphere is composed of approximately 78% nitrogen, 21% oxygen, and 1% other gases, with trace amounts of argon, carbon dioxide, and water vapor.",
+    "Orographic effects occur when air masses are forced to rise over elevated terrain, such as mountains, causing the air to cool and condense into precipitation on the windward side, while the leeward side experiences a rain shadow.",
+    "Fact: The Amazon rainforest receives about 2,000 mm of rain annually, making it the largest tropical rainforest on Earth.",
+    "Fact: The Coriolis effect, caused by Earth's rotation, deflects moving air masses to the right in the Northern Hemisphere and to the left in the Southern Hemisphere.",
+    "Meteorology focuses on weather forecasting and has applications in military, aviation, agriculture, and disaster management.",
+    "Meteorology includes inquiry-based learning activities for students to build and use weather instruments for data collection and prediction.",
+    "You forgot that Category C is the only meteorological phenomenon where temperature, humidity, and pressure all vary together as a single parameter (dew point) rather than independently.",
+    "You misunderstood that Category B (precipitation) is the only one where the main weather concern is the total amount of precipitation, not the type (rain, snow, sleet, etc.).",
+    "You missed that Category A (solar radiation) is the primary driver of Earth's climate and weather patterns, not just a secondary factor.",
+    "You didn't recognize that Category C (radiative heating and cooling) is responsible for both day and night temperature changes, but not the sun's direct radiation.",
+    "You overlooked that Category B (wind) is the dominant factor in moving weather systems, not just the humidity or precipitation itself.",
+    "Meteorology is the scientific study of Earth's atmosphere and short-term weather phenomena, with a focus on forecasting.",
+    "The National Weather Service (NWS) employs 6,000+ forecasters and uses 90+ weather stations, Doppler radar, and satellite data to issue weather warnings.",
+    "The global average sea surface temperature rose from 0.6\u00b0C in 1980 to 0.9\u00b0C in 2023, with a 0.02\u00b0C per year increase since the 1960s.",
+    "The El Ni\u00f1o\u2013Southern Oscillation (ENSO) cycle brings periodic warming and cooling of ocean waters in the central and eastern equatorial Pacific, influencing global weather patterns.",
+    "The Arctic sea ice minimum extent in September in 2023 was approximately 2.1 million km\u00b2, the smallest on record since the 1979 satellite observations.",
+    "Meteorology is the scientific study of atmospheric conditions, including weather patterns, precipitations, and seasonal variations.",
+    "The study of atmospheric conditions is essential for weather forecasting and understanding global climate cycles.",
+    "Common misconception: Meteorology only studies long-term weather patterns. While weather forecasting is a major part of the field, meteorology also analyzes short-term weather phenomena and investigates the mechanisms behind them.",
+    "Incorrect misconception: The term 'meteorology' is often confused with 'meteorology' (weather), whereas meteorology specifically involves the study of the Earth's atmosphere.",
+    "Precipitation is a key focus of meteorology, as it directly affects weather forecasting, agriculture, and disaster management. Example: The 2024 monsoon season in South Asia caused widespread flooding and agricultural losses in India and Bangladesh.",
+    "The study of Earth's atmosphere is known as meteorology.",
+    "Meteorology has applications in military, aviation, and disaster management.",
+    "You struggled to understand the difference between rain, snow, hail, and sleet, and didn't correctly identify their formation.",
+    "You failed to recognize the basic temperature thresholds needed to classify precipitation.",
+    "You didn't grasp the relationship between atmospheric cooling and precipitation type.",
+    "You struggled to identify the different types of wind (e.g., northeasterly, westerly).",
+    "You couldn't correctly describe wind direction as a cardinal direction.",
+    "You didn't understand the difference between wind shear and wind gusts.",
+    "You failed to recognize the difference between a front (warm, cold, or stationary), a boundary, and a jet stream.",
+    "You struggled to understand the basic scale of wind speed and its classification.",
+    "You didn't understand the difference between a hurricane and a typhoon.",
+    "You struggled to understand the basic differences between a thunderstorm and a tornado.",
+    "You didn't understand the difference between a blizzard and a snowstorm."
   ],
   "current_research": {
-    "query": "meteorology Atmospheric layers structure Weather formation processes Pressure systems dynamics",
+    "query": "meteorology The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction. The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating. The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects.",
     "focus_terms": [
-      "Atmospheric layers structure",
-      "Weather formation processes",
-      "Pressure systems dynamics"
+      "The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction.",
+      "The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating.",
+      "The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects."
     ],
     "sources": [
       {
@@ -59,49 +179,49 @@
         "url": "https://en.wikipedia.org/wiki/Meteorology",
         "domain": "wikipedia.org",
         "snippet": "Meteorology is the scientific study of the Earth's atmosphere and short-term atmospheric phenomena, with a focus on weather forecasting. It has applications in the military, aviation, energy production, transport, agriculture, construction, weather warnings, and disaster management.",
-        "query": "meteorology Atmospheric layers structure Weather formation processes Pressure systems dynamics"
+        "query": "meteorology The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction. The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating. The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects."
       },
       {
-        "title": "Chapter 1: Atmospheric Basics \u2013 Atmospheric Processes and Phenomena",
-        "url": "https://pressbooks-dev.oer.hawaii.edu/atmo/chapter/chapter-1/",
-        "domain": "pressbooks-dev.oer.hawaii.edu",
-        "snippet": "This textbook serves as an introduction to atmospheric science for undergraduate students and is the primary textbook for the ATMO 200: Atmospheric Processes and Phenomenon course at the University of Hawai\u2019i at M\u0101noa. The book covers basic atmospheric science, weather, and climate in a descriptive and quantitative way.",
-        "query": "meteorology Atmospheric layers structure Weather formation processes Pressure systems dynamics"
+        "title": "Meteorology: An Educator's Resource for Inquiry-Based Learning for grades 5-9 | Precipitation Education",
+        "url": "https://gpm.nasa.gov/education/lesson-plans/meteorology-educators-resource-inquiry-based-learning-grades-5-9",
+        "domain": "gpm.nasa.gov",
+        "snippet": "A basic introduction to meteorology, including inquiry activities and instructions to build and use weather instruments for a weather station, collect data, and predict weather systems.This website, presented by NASA\u2019s Global Precipitation Measurement (GPM) mission, provides students and educators with resources to learn about Earth\u2019s water cycle, weather and climate, and the",
+        "query": "meteorology The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction. The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating. The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects."
       },
       {
-        "title": "Meteorology \u2013 Introduction to Earth Science, Second Edition",
-        "url": "https://pressbooks.lib.vt.edu/introearthscience2e/chapter/meteorology/",
-        "domain": "pressbooks.lib.vt.edu",
-        "snippet": "<p><b><i>Introduction to Earth Science, Second Edition</i></b> is an open textbook designed to provide a comprehensive introduction to Earth Science that can be freely accessed online, read offline, printed, or purchased as a print-on-demand book. It is intended for a typical 1000-level university introductory course in the Geosciences, although its contents could be applied to many other related courses.</p><p>This text includes various important features designed to enhance the student learning experience in introductory Earth Science courses. These include a multitude of high-quality figures and images within each chapter that help to clarify key concepts. Self-test assessment questions a",
-        "query": "meteorology Atmospheric layers structure Weather formation processes Pressure systems dynamics"
-      },
-      {
-        "title": "Basic Weather Education",
-        "url": "https://www.weather.gov/crp/weather_education",
+        "title": "Student Opportunities in the NWS",
+        "url": "https://www.weather.gov/gid/studentopportunities",
         "domain": "weather.gov",
-        "snippet": "Showers and Thunderstorms for the Eastern Third of the Country; Fire Weather Concerns; Flooding Issues for the Great Lakes Region Showers and thunderstorms will continue along and ahead of a cold front for the eastern third of the country. The rainfall for the Great Lakes region could prolong the ongoing flooding. Much cooler weather will filter in behind this cold front along and east of the Rockies. Where the rain is needed, the Southern High Plains, critical fire weather concerns through this weekend. Read More > Experimental Graphical Hazardous Weather Outlook",
-        "query": "meteorology Atmospheric layers structure Weather formation processes Pressure systems dynamics"
+        "snippet": "2026 SKYWARN Storm Spotter Training Schedule Spring 2026 Frost/Freeze Info (includes average/extreme last frost/freeze dates, etc...Sub-Freezing Temperatures Likely This Weekend (April 18-19) Experimental Graphical Hazardous Weather Outlook",
+        "query": "meteorology The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction. The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating. The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects."
+      },
+      {
+        "title": "Weather and Climate - NASA Science",
+        "url": "https://science.nasa.gov/kids/earth/weather-and-climate/",
+        "domain": "science.nasa.gov",
+        "snippet": "Nutrition Research Arrives Aboard Space Station \u2018Interstellar Glaciers\u2019: NASA\u2019s SPHEREx Maps Vast Galactic Ice Regions NASA Finds Young Stars Dim in X-rays Surprisingly Quickly",
+        "query": "meteorology The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction. The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating. The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects."
       }
     ],
     "candidate_statements": [
       "Meteorology is the scientific study of the Earth's atmosphere and short-term atmospheric phenomena, with a focus on weather forecasting.",
       "It has applications in the military, aviation, energy production, transport, agriculture, construction, weather warnings, and disaster management.",
-      "This textbook serves as an introduction to atmospheric science for undergraduate students and is the primary textbook for the ATMO 200: Atmospheric Processes and Phenomenon course at the University of Hawai\u2019i at M\u0101noa.",
-      "The book covers basic atmospheric science, weather, and climate in a descriptive and quantitative way.",
-      "<p><b><i>Introduction to Earth Science, Second Edition</i></b> is an open textbook designed to provide a comprehensive introduction to Earth Science that can be freely accessed online, read offline, printed, or purchased as a print-on-demand book.",
-      "These include a multitude of high-quality figures and images within each chapter that help to clarify key concepts.",
+      "2026 SKYWARN Storm Spotter Training Schedule Spring 2026 Frost/Freeze Info (includes average/extreme last frost/freeze dates, etc...Sub-Freezing Temperatures Likely This Weekend (April 18-19) Experimental Graphical Hazardous Weather Outlook.",
+      "Nutrition Research Arrives Aboard Space Station \u2018Interstellar Glaciers\u2019: NASA\u2019s SPHEREx Maps Vast Galactic Ice Regions NASA Finds Young Stars Dim in X-rays Surprisingly Quickly.",
       "Showers and Thunderstorms for the Eastern Third of the Country; Fire Weather Concerns; Flooding Issues for the Great Lakes Region Showers and thunderstorms will continue along and ahead of a cold front for the eastern third of the country.",
-      "The rainfall for the Great Lakes region could prolong the ongoing flooding."
+      "The rainfall for the Great Lakes region could prolong the ongoing flooding.",
+      "Much cooler weather will filter in behind this cold front along and east of the Rockies.",
+      "Where the rain is needed, the Southern High Plains, critical fire weather concerns through this weekend."
     ],
-    "timestamp": 1776560878.0064073
+    "timestamp": 1776563921.6788552
   },
   "research_history": [
     {
-      "query": "meteorology Atmospheric layers structure Weather formation processes Pressure systems dynamics",
+      "query": "meteorology Atmospheric conditions Weather patterns Climatological cycles",
       "focus_terms": [
-        "Atmospheric layers structure",
-        "Weather formation processes",
-        "Pressure systems dynamics"
+        "Atmospheric conditions",
+        "Weather patterns",
+        "Climatological cycles"
       ],
       "sources": [
         {
@@ -109,48 +229,48 @@
           "url": "https://en.wikipedia.org/wiki/Meteorology",
           "domain": "wikipedia.org",
           "snippet": "Meteorology is the scientific study of the Earth's atmosphere and short-term atmospheric phenomena, with a focus on weather forecasting. It has applications in the military, aviation, energy production, transport, agriculture, construction, weather warnings, and disaster management.",
-          "query": "meteorology Atmospheric layers structure Weather formation processes Pressure systems dynamics"
+          "query": "meteorology Atmospheric conditions Weather patterns Climatological cycles"
         },
         {
-          "title": "Chapter 1: Atmospheric Basics \u2013 Atmospheric Processes and Phenomena",
-          "url": "https://pressbooks-dev.oer.hawaii.edu/atmo/chapter/chapter-1/",
-          "domain": "pressbooks-dev.oer.hawaii.edu",
-          "snippet": "This textbook serves as an introduction to atmospheric science for undergraduate students and is the primary textbook for the ATMO 200: Atmospheric Processes and Phenomenon course at the University of Hawai\u2019i at M\u0101noa. The book covers basic atmospheric science, weather, and climate in a descriptive and quantitative way.",
-          "query": "meteorology Atmospheric layers structure Weather formation processes Pressure systems dynamics"
+          "title": "expand or collapse the child menu",
+          "url": "https://www.epa.gov/cmaq/meteorological-process-overview",
+          "domain": "epa.gov",
+          "snippet": "Meteorology is an important component to air quality modeling. This pages describe how CMAQ accounts for different meteorological processes, like radiation and cloud transport.",
+          "query": "meteorology Atmospheric conditions Weather patterns Climatological cycles"
         },
         {
-          "title": "Meteorology \u2013 Introduction to Earth Science, Second Edition",
-          "url": "https://pressbooks.lib.vt.edu/introearthscience2e/chapter/meteorology/",
-          "domain": "pressbooks.lib.vt.edu",
-          "snippet": "<p><b><i>Introduction to Earth Science, Second Edition</i></b> is an open textbook designed to provide a comprehensive introduction to Earth Science that can be freely accessed online, read offline, printed, or purchased as a print-on-demand book. It is intended for a typical 1000-level university introductory course in the Geosciences, although its contents could be applied to many other related courses.</p><p>This text includes various important features designed to enhance the student learning experience in introductory Earth Science courses. These include a multitude of high-quality figures and images within each chapter that help to clarify key concepts. Self-test assessment questions a",
-          "query": "meteorology Atmospheric layers structure Weather formation processes Pressure systems dynamics"
+          "title": "Climate | Definition, Weather, & Meteorology | Britannica",
+          "url": "https://www.britannica.com/science/climate-meteorology",
+          "domain": "britannica.com",
+          "snippet": "Climate, conditions of the atmosphere at a particular location over a long period of time; it is the long-term summation of the atmospheric elements (and their variations) that, over short time periods, constitute weather. These elements are solar radiation, temperature, humidity, precipitation",
+          "query": "meteorology Atmospheric conditions Weather patterns Climatological cycles"
         },
         {
-          "title": "Basic Weather Education",
-          "url": "https://www.weather.gov/crp/weather_education",
+          "title": "Climate",
+          "url": "https://www.weather.gov/wrh/climate",
           "domain": "weather.gov",
-          "snippet": "Showers and Thunderstorms for the Eastern Third of the Country; Fire Weather Concerns; Flooding Issues for the Great Lakes Region Showers and thunderstorms will continue along and ahead of a cold front for the eastern third of the country. The rainfall for the Great Lakes region could prolong the ongoing flooding. Much cooler weather will filter in behind this cold front along and east of the Rockies. Where the rain is needed, the Southern High Plains, critical fire weather concerns through this weekend. Read More > Experimental Graphical Hazardous Weather Outlook",
-          "query": "meteorology Atmospheric layers structure Weather formation processes Pressure systems dynamics"
+          "snippet": "Showers and Thunderstorms for the Eastern Third of the Country; Fire Weather Concerns; Flooding Issues for the Great Lakes Region Showers and thunderstorms will continue along and ahead of a cold front for the eastern third of the country. The rainfall for the Great Lakes region could prolong the ongoing flooding. Much cooler weather will filter in behind this cold front along and east of the Rockies. Where the rain is needed, the Southern High Plains, critical fire weather concerns through this weekend. Read More > California-Nevada RFC (River Forecast Center, cnrfc)",
+          "query": "meteorology Atmospheric conditions Weather patterns Climatological cycles"
         }
       ],
       "candidate_statements": [
         "Meteorology is the scientific study of the Earth's atmosphere and short-term atmospheric phenomena, with a focus on weather forecasting.",
         "It has applications in the military, aviation, energy production, transport, agriculture, construction, weather warnings, and disaster management.",
-        "This textbook serves as an introduction to atmospheric science for undergraduate students and is the primary textbook for the ATMO 200: Atmospheric Processes and Phenomenon course at the University of Hawai\u2019i at M\u0101noa.",
-        "The book covers basic atmospheric science, weather, and climate in a descriptive and quantitative way.",
-        "<p><b><i>Introduction to Earth Science, Second Edition</i></b> is an open textbook designed to provide a comprehensive introduction to Earth Science that can be freely accessed online, read offline, printed, or purchased as a print-on-demand book.",
-        "These include a multitude of high-quality figures and images within each chapter that help to clarify key concepts.",
+        "Meteorology is an important component to air quality modeling.",
+        "This pages describe how CMAQ accounts for different meteorological processes, like radiation and cloud transport.",
+        "Climate, conditions of the atmosphere at a particular location over a long period of time; it is the long-term summation of the atmospheric elements (and their variations) that, over short time periods, constitute weather.",
+        "These elements are solar radiation, temperature, humidity, precipitation.",
         "Showers and Thunderstorms for the Eastern Third of the Country; Fire Weather Concerns; Flooding Issues for the Great Lakes Region Showers and thunderstorms will continue along and ahead of a cold front for the eastern third of the country.",
         "The rainfall for the Great Lakes region could prolong the ongoing flooding."
       ],
-      "timestamp": 1776560788.7063262
+      "timestamp": 1776563684.9764698
     },
     {
-      "query": "meteorology Atmospheric layers structure Weather formation processes Pressure systems dynamics",
+      "query": "meteorology Atmospheric conditions Weather patterns Climatological cycles",
       "focus_terms": [
-        "Atmospheric layers structure",
-        "Weather formation processes",
-        "Pressure systems dynamics"
+        "Atmospheric conditions",
+        "Weather patterns",
+        "Climatological cycles"
       ],
       "sources": [
         {
@@ -158,48 +278,48 @@
           "url": "https://en.wikipedia.org/wiki/Meteorology",
           "domain": "wikipedia.org",
           "snippet": "Meteorology is the scientific study of the Earth's atmosphere and short-term atmospheric phenomena, with a focus on weather forecasting. It has applications in the military, aviation, energy production, transport, agriculture, construction, weather warnings, and disaster management.",
-          "query": "meteorology Atmospheric layers structure Weather formation processes Pressure systems dynamics"
+          "query": "meteorology Atmospheric conditions Weather patterns Climatological cycles"
         },
         {
-          "title": "Chapter 1: Atmospheric Basics \u2013 Atmospheric Processes and Phenomena",
-          "url": "https://pressbooks-dev.oer.hawaii.edu/atmo/chapter/chapter-1/",
-          "domain": "pressbooks-dev.oer.hawaii.edu",
-          "snippet": "This textbook serves as an introduction to atmospheric science for undergraduate students and is the primary textbook for the ATMO 200: Atmospheric Processes and Phenomenon course at the University of Hawai\u2019i at M\u0101noa. The book covers basic atmospheric science, weather, and climate in a descriptive and quantitative way.",
-          "query": "meteorology Atmospheric layers structure Weather formation processes Pressure systems dynamics"
+          "title": "expand or collapse the child menu",
+          "url": "https://www.epa.gov/cmaq/meteorological-process-overview",
+          "domain": "epa.gov",
+          "snippet": "Meteorology is an important component to air quality modeling. This pages describe how CMAQ accounts for different meteorological processes, like radiation and cloud transport.",
+          "query": "meteorology Atmospheric conditions Weather patterns Climatological cycles"
         },
         {
-          "title": "Meteorology \u2013 Introduction to Earth Science, Second Edition",
-          "url": "https://pressbooks.lib.vt.edu/introearthscience2e/chapter/meteorology/",
-          "domain": "pressbooks.lib.vt.edu",
-          "snippet": "<p><b><i>Introduction to Earth Science, Second Edition</i></b> is an open textbook designed to provide a comprehensive introduction to Earth Science that can be freely accessed online, read offline, printed, or purchased as a print-on-demand book. It is intended for a typical 1000-level university introductory course in the Geosciences, although its contents could be applied to many other related courses.</p><p>This text includes various important features designed to enhance the student learning experience in introductory Earth Science courses. These include a multitude of high-quality figures and images within each chapter that help to clarify key concepts. Self-test assessment questions a",
-          "query": "meteorology Atmospheric layers structure Weather formation processes Pressure systems dynamics"
+          "title": "Climate | Definition, Weather, & Meteorology | Britannica",
+          "url": "https://www.britannica.com/science/climate-meteorology",
+          "domain": "britannica.com",
+          "snippet": "Climate, conditions of the atmosphere at a particular location over a long period of time; it is the long-term summation of the atmospheric elements (and their variations) that, over short time periods, constitute weather. These elements are solar radiation, temperature, humidity, precipitation",
+          "query": "meteorology Atmospheric conditions Weather patterns Climatological cycles"
         },
         {
-          "title": "Basic Weather Education",
-          "url": "https://www.weather.gov/crp/weather_education",
+          "title": "Climate",
+          "url": "https://www.weather.gov/wrh/climate",
           "domain": "weather.gov",
-          "snippet": "Showers and Thunderstorms for the Eastern Third of the Country; Fire Weather Concerns; Flooding Issues for the Great Lakes Region Showers and thunderstorms will continue along and ahead of a cold front for the eastern third of the country. The rainfall for the Great Lakes region could prolong the ongoing flooding. Much cooler weather will filter in behind this cold front along and east of the Rockies. Where the rain is needed, the Southern High Plains, critical fire weather concerns through this weekend. Read More > Experimental Graphical Hazardous Weather Outlook",
-          "query": "meteorology Atmospheric layers structure Weather formation processes Pressure systems dynamics"
+          "snippet": "Showers and Thunderstorms for the Eastern Third of the Country; Fire Weather Concerns; Flooding Issues for the Great Lakes Region Showers and thunderstorms will continue along and ahead of a cold front for the eastern third of the country. The rainfall for the Great Lakes region could prolong the ongoing flooding. Much cooler weather will filter in behind this cold front along and east of the Rockies. Where the rain is needed, the Southern High Plains, critical fire weather concerns through this weekend. Read More > California-Nevada RFC (River Forecast Center, cnrfc)",
+          "query": "meteorology Atmospheric conditions Weather patterns Climatological cycles"
         }
       ],
       "candidate_statements": [
         "Meteorology is the scientific study of the Earth's atmosphere and short-term atmospheric phenomena, with a focus on weather forecasting.",
         "It has applications in the military, aviation, energy production, transport, agriculture, construction, weather warnings, and disaster management.",
-        "This textbook serves as an introduction to atmospheric science for undergraduate students and is the primary textbook for the ATMO 200: Atmospheric Processes and Phenomenon course at the University of Hawai\u2019i at M\u0101noa.",
-        "The book covers basic atmospheric science, weather, and climate in a descriptive and quantitative way.",
-        "<p><b><i>Introduction to Earth Science, Second Edition</i></b> is an open textbook designed to provide a comprehensive introduction to Earth Science that can be freely accessed online, read offline, printed, or purchased as a print-on-demand book.",
-        "These include a multitude of high-quality figures and images within each chapter that help to clarify key concepts.",
+        "Meteorology is an important component to air quality modeling.",
+        "This pages describe how CMAQ accounts for different meteorological processes, like radiation and cloud transport.",
+        "Climate, conditions of the atmosphere at a particular location over a long period of time; it is the long-term summation of the atmospheric elements (and their variations) that, over short time periods, constitute weather.",
+        "These elements are solar radiation, temperature, humidity, precipitation.",
         "Showers and Thunderstorms for the Eastern Third of the Country; Fire Weather Concerns; Flooding Issues for the Great Lakes Region Showers and thunderstorms will continue along and ahead of a cold front for the eastern third of the country.",
         "The rainfall for the Great Lakes region could prolong the ongoing flooding."
       ],
-      "timestamp": 1776560788.7078352
+      "timestamp": 1776563684.977432
     },
     {
-      "query": "meteorology Atmospheric layers structure Weather formation processes Pressure systems dynamics",
+      "query": "meteorology The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction. The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating. The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects.",
       "focus_terms": [
-        "Atmospheric layers structure",
-        "Weather formation processes",
-        "Pressure systems dynamics"
+        "The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction.",
+        "The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating.",
+        "The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects."
       ],
       "sources": [
         {
@@ -207,48 +327,44 @@
           "url": "https://en.wikipedia.org/wiki/Meteorology",
           "domain": "wikipedia.org",
           "snippet": "Meteorology is the scientific study of the Earth's atmosphere and short-term atmospheric phenomena, with a focus on weather forecasting. It has applications in the military, aviation, energy production, transport, agriculture, construction, weather warnings, and disaster management.",
-          "query": "meteorology Atmospheric layers structure Weather formation processes Pressure systems dynamics"
+          "query": "meteorology The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction. The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating. The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects."
         },
         {
-          "title": "Chapter 1: Atmospheric Basics \u2013 Atmospheric Processes and Phenomena",
-          "url": "https://pressbooks-dev.oer.hawaii.edu/atmo/chapter/chapter-1/",
-          "domain": "pressbooks-dev.oer.hawaii.edu",
-          "snippet": "This textbook serves as an introduction to atmospheric science for undergraduate students and is the primary textbook for the ATMO 200: Atmospheric Processes and Phenomenon course at the University of Hawai\u2019i at M\u0101noa. The book covers basic atmospheric science, weather, and climate in a descriptive and quantitative way.",
-          "query": "meteorology Atmospheric layers structure Weather formation processes Pressure systems dynamics"
+          "title": "Meteorology: An Educator's Resource for Inquiry-Based Learning for grades 5-9 | Precipitation Education",
+          "url": "https://gpm.nasa.gov/education/lesson-plans/meteorology-educators-resource-inquiry-based-learning-grades-5-9",
+          "domain": "gpm.nasa.gov",
+          "snippet": "A basic introduction to meteorology, including inquiry activities and instructions to build and use weather instruments for a weather station, collect data, and predict weather systems.This website, presented by NASA\u2019s Global Precipitation Measurement (GPM) mission, provides students and educators with resources to learn about Earth\u2019s water cycle, weather and climate, and the",
+          "query": "meteorology The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction. The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating. The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects."
         },
         {
-          "title": "Meteorology \u2013 Introduction to Earth Science, Second Edition",
-          "url": "https://pressbooks.lib.vt.edu/introearthscience2e/chapter/meteorology/",
-          "domain": "pressbooks.lib.vt.edu",
-          "snippet": "<p><b><i>Introduction to Earth Science, Second Edition</i></b> is an open textbook designed to provide a comprehensive introduction to Earth Science that can be freely accessed online, read offline, printed, or purchased as a print-on-demand book. It is intended for a typical 1000-level university introductory course in the Geosciences, although its contents could be applied to many other related courses.</p><p>This text includes various important features designed to enhance the student learning experience in introductory Earth Science courses. These include a multitude of high-quality figures and images within each chapter that help to clarify key concepts. Self-test assessment questions a",
-          "query": "meteorology Atmospheric layers structure Weather formation processes Pressure systems dynamics"
-        },
-        {
-          "title": "Basic Weather Education",
-          "url": "https://www.weather.gov/crp/weather_education",
+          "title": "Student Opportunities in the NWS",
+          "url": "https://www.weather.gov/gid/studentopportunities",
           "domain": "weather.gov",
-          "snippet": "Showers and Thunderstorms for the Eastern Third of the Country; Fire Weather Concerns; Flooding Issues for the Great Lakes Region Showers and thunderstorms will continue along and ahead of a cold front for the eastern third of the country. The rainfall for the Great Lakes region could prolong the ongoing flooding. Much cooler weather will filter in behind this cold front along and east of the Rockies. Where the rain is needed, the Southern High Plains, critical fire weather concerns through this weekend. Read More > Experimental Graphical Hazardous Weather Outlook",
-          "query": "meteorology Atmospheric layers structure Weather formation processes Pressure systems dynamics"
+          "snippet": "2026 SKYWARN Storm Spotter Training Schedule Spring 2026 Frost/Freeze Info (includes average/extreme last frost/freeze dates, etc...Sub-Freezing Temperatures Likely This Weekend (April 18-19) Experimental Graphical Hazardous Weather Outlook",
+          "query": "meteorology The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction. The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating. The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects."
+        },
+        {
+          "title": "Weather and Climate - NASA Science",
+          "url": "https://science.nasa.gov/kids/earth/weather-and-climate/",
+          "domain": "science.nasa.gov",
+          "snippet": "Nutrition Research Arrives Aboard Space Station \u2018Interstellar Glaciers\u2019: NASA\u2019s SPHEREx Maps Vast Galactic Ice Regions NASA Finds Young Stars Dim in X-rays Surprisingly Quickly",
+          "query": "meteorology The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction. The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating. The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects."
         }
       ],
       "candidate_statements": [
         "Meteorology is the scientific study of the Earth's atmosphere and short-term atmospheric phenomena, with a focus on weather forecasting.",
         "It has applications in the military, aviation, energy production, transport, agriculture, construction, weather warnings, and disaster management.",
-        "This textbook serves as an introduction to atmospheric science for undergraduate students and is the primary textbook for the ATMO 200: Atmospheric Processes and Phenomenon course at the University of Hawai\u2019i at M\u0101noa.",
-        "The book covers basic atmospheric science, weather, and climate in a descriptive and quantitative way.",
-        "<p><b><i>Introduction to Earth Science, Second Edition</i></b> is an open textbook designed to provide a comprehensive introduction to Earth Science that can be freely accessed online, read offline, printed, or purchased as a print-on-demand book.",
-        "These include a multitude of high-quality figures and images within each chapter that help to clarify key concepts.",
-        "Showers and Thunderstorms for the Eastern Third of the Country; Fire Weather Concerns; Flooding Issues for the Great Lakes Region Showers and thunderstorms will continue along and ahead of a cold front for the eastern third of the country.",
-        "The rainfall for the Great Lakes region could prolong the ongoing flooding."
+        "2026 SKYWARN Storm Spotter Training Schedule Spring 2026 Frost/Freeze Info (includes average/extreme last frost/freeze dates, etc...Sub-Freezing Temperatures Likely This Weekend (April 18-19) Experimental Graphical Hazardous Weather Outlook.",
+        "Nutrition Research Arrives Aboard Space Station \u2018Interstellar Glaciers\u2019: NASA\u2019s SPHEREx Maps Vast Galactic Ice Regions NASA Finds Young Stars Dim in X-rays Surprisingly Quickly."
       ],
-      "timestamp": 1776560832.9221716
+      "timestamp": 1776563718.0634358
     },
     {
-      "query": "meteorology Atmospheric layers structure Weather formation processes Pressure systems dynamics",
+      "query": "meteorology The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction. The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating. The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects.",
       "focus_terms": [
-        "Atmospheric layers structure",
-        "Weather formation processes",
-        "Pressure systems dynamics"
+        "The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction.",
+        "The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating.",
+        "The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects."
       ],
       "sources": [
         {
@@ -256,124 +372,902 @@
           "url": "https://en.wikipedia.org/wiki/Meteorology",
           "domain": "wikipedia.org",
           "snippet": "Meteorology is the scientific study of the Earth's atmosphere and short-term atmospheric phenomena, with a focus on weather forecasting. It has applications in the military, aviation, energy production, transport, agriculture, construction, weather warnings, and disaster management.",
-          "query": "meteorology Atmospheric layers structure Weather formation processes Pressure systems dynamics"
+          "query": "meteorology The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction. The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating. The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects."
         },
         {
-          "title": "Chapter 1: Atmospheric Basics \u2013 Atmospheric Processes and Phenomena",
-          "url": "https://pressbooks-dev.oer.hawaii.edu/atmo/chapter/chapter-1/",
-          "domain": "pressbooks-dev.oer.hawaii.edu",
-          "snippet": "This textbook serves as an introduction to atmospheric science for undergraduate students and is the primary textbook for the ATMO 200: Atmospheric Processes and Phenomenon course at the University of Hawai\u2019i at M\u0101noa. The book covers basic atmospheric science, weather, and climate in a descriptive and quantitative way.",
-          "query": "meteorology Atmospheric layers structure Weather formation processes Pressure systems dynamics"
+          "title": "Meteorology: An Educator's Resource for Inquiry-Based Learning for grades 5-9 | Precipitation Education",
+          "url": "https://gpm.nasa.gov/education/lesson-plans/meteorology-educators-resource-inquiry-based-learning-grades-5-9",
+          "domain": "gpm.nasa.gov",
+          "snippet": "A basic introduction to meteorology, including inquiry activities and instructions to build and use weather instruments for a weather station, collect data, and predict weather systems.This website, presented by NASA\u2019s Global Precipitation Measurement (GPM) mission, provides students and educators with resources to learn about Earth\u2019s water cycle, weather and climate, and the",
+          "query": "meteorology The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction. The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating. The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects."
         },
         {
-          "title": "Meteorology \u2013 Introduction to Earth Science, Second Edition",
-          "url": "https://pressbooks.lib.vt.edu/introearthscience2e/chapter/meteorology/",
-          "domain": "pressbooks.lib.vt.edu",
-          "snippet": "<p><b><i>Introduction to Earth Science, Second Edition</i></b> is an open textbook designed to provide a comprehensive introduction to Earth Science that can be freely accessed online, read offline, printed, or purchased as a print-on-demand book. It is intended for a typical 1000-level university introductory course in the Geosciences, although its contents could be applied to many other related courses.</p><p>This text includes various important features designed to enhance the student learning experience in introductory Earth Science courses. These include a multitude of high-quality figures and images within each chapter that help to clarify key concepts. Self-test assessment questions a",
-          "query": "meteorology Atmospheric layers structure Weather formation processes Pressure systems dynamics"
-        },
-        {
-          "title": "Basic Weather Education",
-          "url": "https://www.weather.gov/crp/weather_education",
+          "title": "Student Opportunities in the NWS",
+          "url": "https://www.weather.gov/gid/studentopportunities",
           "domain": "weather.gov",
-          "snippet": "Showers and Thunderstorms for the Eastern Third of the Country; Fire Weather Concerns; Flooding Issues for the Great Lakes Region Showers and thunderstorms will continue along and ahead of a cold front for the eastern third of the country. The rainfall for the Great Lakes region could prolong the ongoing flooding. Much cooler weather will filter in behind this cold front along and east of the Rockies. Where the rain is needed, the Southern High Plains, critical fire weather concerns through this weekend. Read More > Experimental Graphical Hazardous Weather Outlook",
-          "query": "meteorology Atmospheric layers structure Weather formation processes Pressure systems dynamics"
+          "snippet": "2026 SKYWARN Storm Spotter Training Schedule Spring 2026 Frost/Freeze Info (includes average/extreme last frost/freeze dates, etc...Sub-Freezing Temperatures Likely This Weekend (April 18-19) Experimental Graphical Hazardous Weather Outlook",
+          "query": "meteorology The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction. The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating. The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects."
+        },
+        {
+          "title": "Weather and Climate - NASA Science",
+          "url": "https://science.nasa.gov/kids/earth/weather-and-climate/",
+          "domain": "science.nasa.gov",
+          "snippet": "Nutrition Research Arrives Aboard Space Station \u2018Interstellar Glaciers\u2019: NASA\u2019s SPHEREx Maps Vast Galactic Ice Regions NASA Finds Young Stars Dim in X-rays Surprisingly Quickly",
+          "query": "meteorology The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction. The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating. The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects."
         }
       ],
       "candidate_statements": [
         "Meteorology is the scientific study of the Earth's atmosphere and short-term atmospheric phenomena, with a focus on weather forecasting.",
         "It has applications in the military, aviation, energy production, transport, agriculture, construction, weather warnings, and disaster management.",
-        "This textbook serves as an introduction to atmospheric science for undergraduate students and is the primary textbook for the ATMO 200: Atmospheric Processes and Phenomenon course at the University of Hawai\u2019i at M\u0101noa.",
-        "The book covers basic atmospheric science, weather, and climate in a descriptive and quantitative way.",
-        "<p><b><i>Introduction to Earth Science, Second Edition</i></b> is an open textbook designed to provide a comprehensive introduction to Earth Science that can be freely accessed online, read offline, printed, or purchased as a print-on-demand book.",
-        "These include a multitude of high-quality figures and images within each chapter that help to clarify key concepts.",
+        "2026 SKYWARN Storm Spotter Training Schedule Spring 2026 Frost/Freeze Info (includes average/extreme last frost/freeze dates, etc...Sub-Freezing Temperatures Likely This Weekend (April 18-19) Experimental Graphical Hazardous Weather Outlook.",
+        "Nutrition Research Arrives Aboard Space Station \u2018Interstellar Glaciers\u2019: NASA\u2019s SPHEREx Maps Vast Galactic Ice Regions NASA Finds Young Stars Dim in X-rays Surprisingly Quickly.",
         "Showers and Thunderstorms for the Eastern Third of the Country; Fire Weather Concerns; Flooding Issues for the Great Lakes Region Showers and thunderstorms will continue along and ahead of a cold front for the eastern third of the country.",
-        "The rainfall for the Great Lakes region could prolong the ongoing flooding."
+        "The rainfall for the Great Lakes region could prolong the ongoing flooding.",
+        "Much cooler weather will filter in behind this cold front along and east of the Rockies.",
+        "Where the rain is needed, the Southern High Plains, critical fire weather concerns through this weekend."
       ],
-      "timestamp": 1776560878.0064073
+      "timestamp": 1776563718.0646815
+    },
+    {
+      "query": "meteorology The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction. The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating. The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects.",
+      "focus_terms": [
+        "The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction.",
+        "The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating.",
+        "The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects."
+      ],
+      "sources": [
+        {
+          "title": "Meteorology",
+          "url": "https://en.wikipedia.org/wiki/Meteorology",
+          "domain": "wikipedia.org",
+          "snippet": "Meteorology is the scientific study of the Earth's atmosphere and short-term atmospheric phenomena, with a focus on weather forecasting. It has applications in the military, aviation, energy production, transport, agriculture, construction, weather warnings, and disaster management.",
+          "query": "meteorology The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction. The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating. The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects."
+        },
+        {
+          "title": "Meteorology: An Educator's Resource for Inquiry-Based Learning for grades 5-9 | Precipitation Education",
+          "url": "https://gpm.nasa.gov/education/lesson-plans/meteorology-educators-resource-inquiry-based-learning-grades-5-9",
+          "domain": "gpm.nasa.gov",
+          "snippet": "A basic introduction to meteorology, including inquiry activities and instructions to build and use weather instruments for a weather station, collect data, and predict weather systems.This website, presented by NASA\u2019s Global Precipitation Measurement (GPM) mission, provides students and educators with resources to learn about Earth\u2019s water cycle, weather and climate, and the",
+          "query": "meteorology The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction. The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating. The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects."
+        },
+        {
+          "title": "Student Opportunities in the NWS",
+          "url": "https://www.weather.gov/gid/studentopportunities",
+          "domain": "weather.gov",
+          "snippet": "2026 SKYWARN Storm Spotter Training Schedule Spring 2026 Frost/Freeze Info (includes average/extreme last frost/freeze dates, etc...Sub-Freezing Temperatures Likely This Weekend (April 18-19) Experimental Graphical Hazardous Weather Outlook",
+          "query": "meteorology The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction. The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating. The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects."
+        },
+        {
+          "title": "Weather and Climate - NASA Science",
+          "url": "https://science.nasa.gov/kids/earth/weather-and-climate/",
+          "domain": "science.nasa.gov",
+          "snippet": "Nutrition Research Arrives Aboard Space Station \u2018Interstellar Glaciers\u2019: NASA\u2019s SPHEREx Maps Vast Galactic Ice Regions NASA Finds Young Stars Dim in X-rays Surprisingly Quickly",
+          "query": "meteorology The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction. The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating. The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects."
+        }
+      ],
+      "candidate_statements": [
+        "Meteorology is the scientific study of the Earth's atmosphere and short-term atmospheric phenomena, with a focus on weather forecasting.",
+        "It has applications in the military, aviation, energy production, transport, agriculture, construction, weather warnings, and disaster management.",
+        "2026 SKYWARN Storm Spotter Training Schedule Spring 2026 Frost/Freeze Info (includes average/extreme last frost/freeze dates, etc...Sub-Freezing Temperatures Likely This Weekend (April 18-19) Experimental Graphical Hazardous Weather Outlook.",
+        "Nutrition Research Arrives Aboard Space Station \u2018Interstellar Glaciers\u2019: NASA\u2019s SPHEREx Maps Vast Galactic Ice Regions NASA Finds Young Stars Dim in X-rays Surprisingly Quickly.",
+        "Showers and Thunderstorms for the Eastern Third of the Country; Fire Weather Concerns; Flooding Issues for the Great Lakes Region Showers and thunderstorms will continue along and ahead of a cold front for the eastern third of the country.",
+        "The rainfall for the Great Lakes region could prolong the ongoing flooding.",
+        "Much cooler weather will filter in behind this cold front along and east of the Rockies.",
+        "Where the rain is needed, the Southern High Plains, critical fire weather concerns through this weekend."
+      ],
+      "timestamp": 1776563746.7758594
+    },
+    {
+      "query": "meteorology The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction. The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating. The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects.",
+      "focus_terms": [
+        "The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction.",
+        "The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating.",
+        "The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects."
+      ],
+      "sources": [
+        {
+          "title": "Meteorology",
+          "url": "https://en.wikipedia.org/wiki/Meteorology",
+          "domain": "wikipedia.org",
+          "snippet": "Meteorology is the scientific study of the Earth's atmosphere and short-term atmospheric phenomena, with a focus on weather forecasting. It has applications in the military, aviation, energy production, transport, agriculture, construction, weather warnings, and disaster management.",
+          "query": "meteorology The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction. The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating. The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects."
+        },
+        {
+          "title": "Meteorology: An Educator's Resource for Inquiry-Based Learning for grades 5-9 | Precipitation Education",
+          "url": "https://gpm.nasa.gov/education/lesson-plans/meteorology-educators-resource-inquiry-based-learning-grades-5-9",
+          "domain": "gpm.nasa.gov",
+          "snippet": "A basic introduction to meteorology, including inquiry activities and instructions to build and use weather instruments for a weather station, collect data, and predict weather systems.This website, presented by NASA\u2019s Global Precipitation Measurement (GPM) mission, provides students and educators with resources to learn about Earth\u2019s water cycle, weather and climate, and the",
+          "query": "meteorology The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction. The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating. The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects."
+        },
+        {
+          "title": "Student Opportunities in the NWS",
+          "url": "https://www.weather.gov/gid/studentopportunities",
+          "domain": "weather.gov",
+          "snippet": "2026 SKYWARN Storm Spotter Training Schedule Spring 2026 Frost/Freeze Info (includes average/extreme last frost/freeze dates, etc...Sub-Freezing Temperatures Likely This Weekend (April 18-19) Experimental Graphical Hazardous Weather Outlook",
+          "query": "meteorology The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction. The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating. The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects."
+        },
+        {
+          "title": "Weather and Climate - NASA Science",
+          "url": "https://science.nasa.gov/kids/earth/weather-and-climate/",
+          "domain": "science.nasa.gov",
+          "snippet": "Nutrition Research Arrives Aboard Space Station \u2018Interstellar Glaciers\u2019: NASA\u2019s SPHEREx Maps Vast Galactic Ice Regions NASA Finds Young Stars Dim in X-rays Surprisingly Quickly",
+          "query": "meteorology The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction. The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating. The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects."
+        }
+      ],
+      "candidate_statements": [
+        "Meteorology is the scientific study of the Earth's atmosphere and short-term atmospheric phenomena, with a focus on weather forecasting.",
+        "It has applications in the military, aviation, energy production, transport, agriculture, construction, weather warnings, and disaster management.",
+        "2026 SKYWARN Storm Spotter Training Schedule Spring 2026 Frost/Freeze Info (includes average/extreme last frost/freeze dates, etc...Sub-Freezing Temperatures Likely This Weekend (April 18-19) Experimental Graphical Hazardous Weather Outlook.",
+        "Nutrition Research Arrives Aboard Space Station \u2018Interstellar Glaciers\u2019: NASA\u2019s SPHEREx Maps Vast Galactic Ice Regions NASA Finds Young Stars Dim in X-rays Surprisingly Quickly.",
+        "Showers and Thunderstorms for the Eastern Third of the Country; Fire Weather Concerns; Flooding Issues for the Great Lakes Region Showers and thunderstorms will continue along and ahead of a cold front for the eastern third of the country.",
+        "The rainfall for the Great Lakes region could prolong the ongoing flooding.",
+        "Much cooler weather will filter in behind this cold front along and east of the Rockies.",
+        "Where the rain is needed, the Southern High Plains, critical fire weather concerns through this weekend."
+      ],
+      "timestamp": 1776563773.5065618
+    },
+    {
+      "query": "meteorology The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction. The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating. The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects.",
+      "focus_terms": [
+        "The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction.",
+        "The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating.",
+        "The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects."
+      ],
+      "sources": [
+        {
+          "title": "Meteorology",
+          "url": "https://en.wikipedia.org/wiki/Meteorology",
+          "domain": "wikipedia.org",
+          "snippet": "Meteorology is the scientific study of the Earth's atmosphere and short-term atmospheric phenomena, with a focus on weather forecasting. It has applications in the military, aviation, energy production, transport, agriculture, construction, weather warnings, and disaster management.",
+          "query": "meteorology The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction. The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating. The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects."
+        },
+        {
+          "title": "Meteorology: An Educator's Resource for Inquiry-Based Learning for grades 5-9 | Precipitation Education",
+          "url": "https://gpm.nasa.gov/education/lesson-plans/meteorology-educators-resource-inquiry-based-learning-grades-5-9",
+          "domain": "gpm.nasa.gov",
+          "snippet": "A basic introduction to meteorology, including inquiry activities and instructions to build and use weather instruments for a weather station, collect data, and predict weather systems.This website, presented by NASA\u2019s Global Precipitation Measurement (GPM) mission, provides students and educators with resources to learn about Earth\u2019s water cycle, weather and climate, and the",
+          "query": "meteorology The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction. The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating. The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects."
+        },
+        {
+          "title": "Student Opportunities in the NWS",
+          "url": "https://www.weather.gov/gid/studentopportunities",
+          "domain": "weather.gov",
+          "snippet": "2026 SKYWARN Storm Spotter Training Schedule Spring 2026 Frost/Freeze Info (includes average/extreme last frost/freeze dates, etc...Sub-Freezing Temperatures Likely This Weekend (April 18-19) Experimental Graphical Hazardous Weather Outlook",
+          "query": "meteorology The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction. The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating. The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects."
+        },
+        {
+          "title": "Weather and Climate - NASA Science",
+          "url": "https://science.nasa.gov/kids/earth/weather-and-climate/",
+          "domain": "science.nasa.gov",
+          "snippet": "Nutrition Research Arrives Aboard Space Station \u2018Interstellar Glaciers\u2019: NASA\u2019s SPHEREx Maps Vast Galactic Ice Regions NASA Finds Young Stars Dim in X-rays Surprisingly Quickly",
+          "query": "meteorology The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction. The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating. The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects."
+        }
+      ],
+      "candidate_statements": [
+        "Meteorology is the scientific study of the Earth's atmosphere and short-term atmospheric phenomena, with a focus on weather forecasting.",
+        "It has applications in the military, aviation, energy production, transport, agriculture, construction, weather warnings, and disaster management.",
+        "2026 SKYWARN Storm Spotter Training Schedule Spring 2026 Frost/Freeze Info (includes average/extreme last frost/freeze dates, etc...Sub-Freezing Temperatures Likely This Weekend (April 18-19) Experimental Graphical Hazardous Weather Outlook.",
+        "Nutrition Research Arrives Aboard Space Station \u2018Interstellar Glaciers\u2019: NASA\u2019s SPHEREx Maps Vast Galactic Ice Regions NASA Finds Young Stars Dim in X-rays Surprisingly Quickly.",
+        "Showers and Thunderstorms for the Eastern Third of the Country; Fire Weather Concerns; Flooding Issues for the Great Lakes Region Showers and thunderstorms will continue along and ahead of a cold front for the eastern third of the country.",
+        "The rainfall for the Great Lakes region could prolong the ongoing flooding.",
+        "Much cooler weather will filter in behind this cold front along and east of the Rockies.",
+        "Where the rain is needed, the Southern High Plains, critical fire weather concerns through this weekend."
+      ],
+      "timestamp": 1776563795.8252037
+    },
+    {
+      "query": "meteorology The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction. The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating. The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects.",
+      "focus_terms": [
+        "The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction.",
+        "The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating.",
+        "The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects."
+      ],
+      "sources": [
+        {
+          "title": "Meteorology",
+          "url": "https://en.wikipedia.org/wiki/Meteorology",
+          "domain": "wikipedia.org",
+          "snippet": "Meteorology is the scientific study of the Earth's atmosphere and short-term atmospheric phenomena, with a focus on weather forecasting. It has applications in the military, aviation, energy production, transport, agriculture, construction, weather warnings, and disaster management.",
+          "query": "meteorology The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction. The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating. The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects."
+        },
+        {
+          "title": "Meteorology: An Educator's Resource for Inquiry-Based Learning for grades 5-9 | Precipitation Education",
+          "url": "https://gpm.nasa.gov/education/lesson-plans/meteorology-educators-resource-inquiry-based-learning-grades-5-9",
+          "domain": "gpm.nasa.gov",
+          "snippet": "A basic introduction to meteorology, including inquiry activities and instructions to build and use weather instruments for a weather station, collect data, and predict weather systems.This website, presented by NASA\u2019s Global Precipitation Measurement (GPM) mission, provides students and educators with resources to learn about Earth\u2019s water cycle, weather and climate, and the",
+          "query": "meteorology The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction. The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating. The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects."
+        },
+        {
+          "title": "Student Opportunities in the NWS",
+          "url": "https://www.weather.gov/gid/studentopportunities",
+          "domain": "weather.gov",
+          "snippet": "2026 SKYWARN Storm Spotter Training Schedule Spring 2026 Frost/Freeze Info (includes average/extreme last frost/freeze dates, etc...Sub-Freezing Temperatures Likely This Weekend (April 18-19) Experimental Graphical Hazardous Weather Outlook",
+          "query": "meteorology The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction. The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating. The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects."
+        },
+        {
+          "title": "Weather and Climate - NASA Science",
+          "url": "https://science.nasa.gov/kids/earth/weather-and-climate/",
+          "domain": "science.nasa.gov",
+          "snippet": "Nutrition Research Arrives Aboard Space Station \u2018Interstellar Glaciers\u2019: NASA\u2019s SPHEREx Maps Vast Galactic Ice Regions NASA Finds Young Stars Dim in X-rays Surprisingly Quickly",
+          "query": "meteorology The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction. The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating. The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects."
+        }
+      ],
+      "candidate_statements": [
+        "Meteorology is the scientific study of the Earth's atmosphere and short-term atmospheric phenomena, with a focus on weather forecasting.",
+        "It has applications in the military, aviation, energy production, transport, agriculture, construction, weather warnings, and disaster management.",
+        "2026 SKYWARN Storm Spotter Training Schedule Spring 2026 Frost/Freeze Info (includes average/extreme last frost/freeze dates, etc...Sub-Freezing Temperatures Likely This Weekend (April 18-19) Experimental Graphical Hazardous Weather Outlook.",
+        "Nutrition Research Arrives Aboard Space Station \u2018Interstellar Glaciers\u2019: NASA\u2019s SPHEREx Maps Vast Galactic Ice Regions NASA Finds Young Stars Dim in X-rays Surprisingly Quickly.",
+        "Showers and Thunderstorms for the Eastern Third of the Country; Fire Weather Concerns; Flooding Issues for the Great Lakes Region Showers and thunderstorms will continue along and ahead of a cold front for the eastern third of the country.",
+        "The rainfall for the Great Lakes region could prolong the ongoing flooding.",
+        "Much cooler weather will filter in behind this cold front along and east of the Rockies.",
+        "Where the rain is needed, the Southern High Plains, critical fire weather concerns through this weekend."
+      ],
+      "timestamp": 1776563823.0386822
+    },
+    {
+      "query": "meteorology The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction. The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating. The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects.",
+      "focus_terms": [
+        "The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction.",
+        "The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating.",
+        "The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects."
+      ],
+      "sources": [
+        {
+          "title": "Meteorology",
+          "url": "https://en.wikipedia.org/wiki/Meteorology",
+          "domain": "wikipedia.org",
+          "snippet": "Meteorology is the scientific study of the Earth's atmosphere and short-term atmospheric phenomena, with a focus on weather forecasting. It has applications in the military, aviation, energy production, transport, agriculture, construction, weather warnings, and disaster management.",
+          "query": "meteorology The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction. The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating. The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects."
+        },
+        {
+          "title": "Meteorology: An Educator's Resource for Inquiry-Based Learning for grades 5-9 | Precipitation Education",
+          "url": "https://gpm.nasa.gov/education/lesson-plans/meteorology-educators-resource-inquiry-based-learning-grades-5-9",
+          "domain": "gpm.nasa.gov",
+          "snippet": "A basic introduction to meteorology, including inquiry activities and instructions to build and use weather instruments for a weather station, collect data, and predict weather systems.This website, presented by NASA\u2019s Global Precipitation Measurement (GPM) mission, provides students and educators with resources to learn about Earth\u2019s water cycle, weather and climate, and the",
+          "query": "meteorology The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction. The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating. The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects."
+        },
+        {
+          "title": "Student Opportunities in the NWS",
+          "url": "https://www.weather.gov/gid/studentopportunities",
+          "domain": "weather.gov",
+          "snippet": "2026 SKYWARN Storm Spotter Training Schedule Spring 2026 Frost/Freeze Info (includes average/extreme last frost/freeze dates, etc...Sub-Freezing Temperatures Likely This Weekend (April 18-19) Experimental Graphical Hazardous Weather Outlook",
+          "query": "meteorology The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction. The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating. The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects."
+        },
+        {
+          "title": "Weather and Climate - NASA Science",
+          "url": "https://science.nasa.gov/kids/earth/weather-and-climate/",
+          "domain": "science.nasa.gov",
+          "snippet": "Nutrition Research Arrives Aboard Space Station \u2018Interstellar Glaciers\u2019: NASA\u2019s SPHEREx Maps Vast Galactic Ice Regions NASA Finds Young Stars Dim in X-rays Surprisingly Quickly",
+          "query": "meteorology The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction. The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating. The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects."
+        }
+      ],
+      "candidate_statements": [
+        "Meteorology is the scientific study of the Earth's atmosphere and short-term atmospheric phenomena, with a focus on weather forecasting.",
+        "It has applications in the military, aviation, energy production, transport, agriculture, construction, weather warnings, and disaster management.",
+        "2026 SKYWARN Storm Spotter Training Schedule Spring 2026 Frost/Freeze Info (includes average/extreme last frost/freeze dates, etc...Sub-Freezing Temperatures Likely This Weekend (April 18-19) Experimental Graphical Hazardous Weather Outlook.",
+        "Nutrition Research Arrives Aboard Space Station \u2018Interstellar Glaciers\u2019: NASA\u2019s SPHEREx Maps Vast Galactic Ice Regions NASA Finds Young Stars Dim in X-rays Surprisingly Quickly.",
+        "Showers and Thunderstorms for the Eastern Third of the Country; Fire Weather Concerns; Flooding Issues for the Great Lakes Region Showers and thunderstorms will continue along and ahead of a cold front for the eastern third of the country.",
+        "The rainfall for the Great Lakes region could prolong the ongoing flooding.",
+        "Much cooler weather will filter in behind this cold front along and east of the Rockies.",
+        "Where the rain is needed, the Southern High Plains, critical fire weather concerns through this weekend."
+      ],
+      "timestamp": 1776563845.053166
+    },
+    {
+      "query": "meteorology The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction. The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating. The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects.",
+      "focus_terms": [
+        "The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction.",
+        "The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating.",
+        "The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects."
+      ],
+      "sources": [
+        {
+          "title": "Meteorology",
+          "url": "https://en.wikipedia.org/wiki/Meteorology",
+          "domain": "wikipedia.org",
+          "snippet": "Meteorology is the scientific study of the Earth's atmosphere and short-term atmospheric phenomena, with a focus on weather forecasting. It has applications in the military, aviation, energy production, transport, agriculture, construction, weather warnings, and disaster management.",
+          "query": "meteorology The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction. The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating. The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects."
+        },
+        {
+          "title": "Meteorology: An Educator's Resource for Inquiry-Based Learning for grades 5-9 | Precipitation Education",
+          "url": "https://gpm.nasa.gov/education/lesson-plans/meteorology-educators-resource-inquiry-based-learning-grades-5-9",
+          "domain": "gpm.nasa.gov",
+          "snippet": "A basic introduction to meteorology, including inquiry activities and instructions to build and use weather instruments for a weather station, collect data, and predict weather systems.This website, presented by NASA\u2019s Global Precipitation Measurement (GPM) mission, provides students and educators with resources to learn about Earth\u2019s water cycle, weather and climate, and the",
+          "query": "meteorology The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction. The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating. The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects."
+        },
+        {
+          "title": "Student Opportunities in the NWS",
+          "url": "https://www.weather.gov/gid/studentopportunities",
+          "domain": "weather.gov",
+          "snippet": "2026 SKYWARN Storm Spotter Training Schedule Spring 2026 Frost/Freeze Info (includes average/extreme last frost/freeze dates, etc...Sub-Freezing Temperatures Likely This Weekend (April 18-19) Experimental Graphical Hazardous Weather Outlook",
+          "query": "meteorology The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction. The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating. The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects."
+        },
+        {
+          "title": "Weather and Climate - NASA Science",
+          "url": "https://science.nasa.gov/kids/earth/weather-and-climate/",
+          "domain": "science.nasa.gov",
+          "snippet": "Nutrition Research Arrives Aboard Space Station \u2018Interstellar Glaciers\u2019: NASA\u2019s SPHEREx Maps Vast Galactic Ice Regions NASA Finds Young Stars Dim in X-rays Surprisingly Quickly",
+          "query": "meteorology The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction. The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating. The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects."
+        }
+      ],
+      "candidate_statements": [
+        "Meteorology is the scientific study of the Earth's atmosphere and short-term atmospheric phenomena, with a focus on weather forecasting.",
+        "It has applications in the military, aviation, energy production, transport, agriculture, construction, weather warnings, and disaster management.",
+        "2026 SKYWARN Storm Spotter Training Schedule Spring 2026 Frost/Freeze Info (includes average/extreme last frost/freeze dates, etc...Sub-Freezing Temperatures Likely This Weekend (April 18-19) Experimental Graphical Hazardous Weather Outlook.",
+        "Nutrition Research Arrives Aboard Space Station \u2018Interstellar Glaciers\u2019: NASA\u2019s SPHEREx Maps Vast Galactic Ice Regions NASA Finds Young Stars Dim in X-rays Surprisingly Quickly.",
+        "Showers and Thunderstorms for the Eastern Third of the Country; Fire Weather Concerns; Flooding Issues for the Great Lakes Region Showers and thunderstorms will continue along and ahead of a cold front for the eastern third of the country.",
+        "The rainfall for the Great Lakes region could prolong the ongoing flooding.",
+        "Much cooler weather will filter in behind this cold front along and east of the Rockies.",
+        "Where the rain is needed, the Southern High Plains, critical fire weather concerns through this weekend."
+      ],
+      "timestamp": 1776563871.6587446
+    },
+    {
+      "query": "meteorology The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction. The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating. The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects.",
+      "focus_terms": [
+        "The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction.",
+        "The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating.",
+        "The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects."
+      ],
+      "sources": [
+        {
+          "title": "Meteorology",
+          "url": "https://en.wikipedia.org/wiki/Meteorology",
+          "domain": "wikipedia.org",
+          "snippet": "Meteorology is the scientific study of the Earth's atmosphere and short-term atmospheric phenomena, with a focus on weather forecasting. It has applications in the military, aviation, energy production, transport, agriculture, construction, weather warnings, and disaster management.",
+          "query": "meteorology The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction. The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating. The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects."
+        },
+        {
+          "title": "Meteorology: An Educator's Resource for Inquiry-Based Learning for grades 5-9 | Precipitation Education",
+          "url": "https://gpm.nasa.gov/education/lesson-plans/meteorology-educators-resource-inquiry-based-learning-grades-5-9",
+          "domain": "gpm.nasa.gov",
+          "snippet": "A basic introduction to meteorology, including inquiry activities and instructions to build and use weather instruments for a weather station, collect data, and predict weather systems.This website, presented by NASA\u2019s Global Precipitation Measurement (GPM) mission, provides students and educators with resources to learn about Earth\u2019s water cycle, weather and climate, and the",
+          "query": "meteorology The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction. The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating. The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects."
+        },
+        {
+          "title": "Student Opportunities in the NWS",
+          "url": "https://www.weather.gov/gid/studentopportunities",
+          "domain": "weather.gov",
+          "snippet": "2026 SKYWARN Storm Spotter Training Schedule Spring 2026 Frost/Freeze Info (includes average/extreme last frost/freeze dates, etc...Sub-Freezing Temperatures Likely This Weekend (April 18-19) Experimental Graphical Hazardous Weather Outlook",
+          "query": "meteorology The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction. The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating. The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects."
+        },
+        {
+          "title": "Weather and Climate - NASA Science",
+          "url": "https://science.nasa.gov/kids/earth/weather-and-climate/",
+          "domain": "science.nasa.gov",
+          "snippet": "Nutrition Research Arrives Aboard Space Station \u2018Interstellar Glaciers\u2019: NASA\u2019s SPHEREx Maps Vast Galactic Ice Regions NASA Finds Young Stars Dim in X-rays Surprisingly Quickly",
+          "query": "meteorology The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction. The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating. The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects."
+        }
+      ],
+      "candidate_statements": [
+        "Meteorology is the scientific study of the Earth's atmosphere and short-term atmospheric phenomena, with a focus on weather forecasting.",
+        "It has applications in the military, aviation, energy production, transport, agriculture, construction, weather warnings, and disaster management.",
+        "2026 SKYWARN Storm Spotter Training Schedule Spring 2026 Frost/Freeze Info (includes average/extreme last frost/freeze dates, etc...Sub-Freezing Temperatures Likely This Weekend (April 18-19) Experimental Graphical Hazardous Weather Outlook.",
+        "Nutrition Research Arrives Aboard Space Station \u2018Interstellar Glaciers\u2019: NASA\u2019s SPHEREx Maps Vast Galactic Ice Regions NASA Finds Young Stars Dim in X-rays Surprisingly Quickly.",
+        "Showers and Thunderstorms for the Eastern Third of the Country; Fire Weather Concerns; Flooding Issues for the Great Lakes Region Showers and thunderstorms will continue along and ahead of a cold front for the eastern third of the country.",
+        "The rainfall for the Great Lakes region could prolong the ongoing flooding.",
+        "Much cooler weather will filter in behind this cold front along and east of the Rockies.",
+        "Where the rain is needed, the Southern High Plains, critical fire weather concerns through this weekend."
+      ],
+      "timestamp": 1776563897.7707746
+    },
+    {
+      "query": "meteorology The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction. The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating. The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects.",
+      "focus_terms": [
+        "The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction.",
+        "The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating.",
+        "The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects."
+      ],
+      "sources": [
+        {
+          "title": "Meteorology",
+          "url": "https://en.wikipedia.org/wiki/Meteorology",
+          "domain": "wikipedia.org",
+          "snippet": "Meteorology is the scientific study of the Earth's atmosphere and short-term atmospheric phenomena, with a focus on weather forecasting. It has applications in the military, aviation, energy production, transport, agriculture, construction, weather warnings, and disaster management.",
+          "query": "meteorology The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction. The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating. The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects."
+        },
+        {
+          "title": "Meteorology: An Educator's Resource for Inquiry-Based Learning for grades 5-9 | Precipitation Education",
+          "url": "https://gpm.nasa.gov/education/lesson-plans/meteorology-educators-resource-inquiry-based-learning-grades-5-9",
+          "domain": "gpm.nasa.gov",
+          "snippet": "A basic introduction to meteorology, including inquiry activities and instructions to build and use weather instruments for a weather station, collect data, and predict weather systems.This website, presented by NASA\u2019s Global Precipitation Measurement (GPM) mission, provides students and educators with resources to learn about Earth\u2019s water cycle, weather and climate, and the",
+          "query": "meteorology The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction. The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating. The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects."
+        },
+        {
+          "title": "Student Opportunities in the NWS",
+          "url": "https://www.weather.gov/gid/studentopportunities",
+          "domain": "weather.gov",
+          "snippet": "2026 SKYWARN Storm Spotter Training Schedule Spring 2026 Frost/Freeze Info (includes average/extreme last frost/freeze dates, etc...Sub-Freezing Temperatures Likely This Weekend (April 18-19) Experimental Graphical Hazardous Weather Outlook",
+          "query": "meteorology The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction. The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating. The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects."
+        },
+        {
+          "title": "Weather and Climate - NASA Science",
+          "url": "https://science.nasa.gov/kids/earth/weather-and-climate/",
+          "domain": "science.nasa.gov",
+          "snippet": "Nutrition Research Arrives Aboard Space Station \u2018Interstellar Glaciers\u2019: NASA\u2019s SPHEREx Maps Vast Galactic Ice Regions NASA Finds Young Stars Dim in X-rays Surprisingly Quickly",
+          "query": "meteorology The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction. The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating. The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects."
+        }
+      ],
+      "candidate_statements": [
+        "Meteorology is the scientific study of the Earth's atmosphere and short-term atmospheric phenomena, with a focus on weather forecasting.",
+        "It has applications in the military, aviation, energy production, transport, agriculture, construction, weather warnings, and disaster management.",
+        "2026 SKYWARN Storm Spotter Training Schedule Spring 2026 Frost/Freeze Info (includes average/extreme last frost/freeze dates, etc...Sub-Freezing Temperatures Likely This Weekend (April 18-19) Experimental Graphical Hazardous Weather Outlook.",
+        "Nutrition Research Arrives Aboard Space Station \u2018Interstellar Glaciers\u2019: NASA\u2019s SPHEREx Maps Vast Galactic Ice Regions NASA Finds Young Stars Dim in X-rays Surprisingly Quickly.",
+        "Showers and Thunderstorms for the Eastern Third of the Country; Fire Weather Concerns; Flooding Issues for the Great Lakes Region Showers and thunderstorms will continue along and ahead of a cold front for the eastern third of the country.",
+        "The rainfall for the Great Lakes region could prolong the ongoing flooding.",
+        "Much cooler weather will filter in behind this cold front along and east of the Rockies.",
+        "Where the rain is needed, the Southern High Plains, critical fire weather concerns through this weekend."
+      ],
+      "timestamp": 1776563921.6788552
     }
   ],
   "reinforcement": {
     "concept_mastery": {
-      "Atmospheric layers structure": 0.54,
-      "Weather formation processes": 0.54,
-      "Pressure systems dynamics": 0.54
+      "meteorological concepts": -0.04,
+      "climate vs weather": -0.04,
+      "weather forecasting applications": -0.04,
+      "The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction.": -0.3,
+      "The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating.": -0.3,
+      "The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects.": -0.3,
+      "The student's answer to Q4 is incorrect because thunderstorms in the Eastern Third of the Country are primarily associated with tropical cyclones, not orographic effects.": -0.3,
+      "weather forecasting accuracy": -0.04,
+      "climate vs weather misconceptions": -0.04,
+      "ocean-atmosphere interaction": -0.04,
+      "The student's answer to Q3 is incorrect because climate refers to long-term patterns, not short-term weather.": -0.3,
+      "The student's answer to Q10 is incorrect because the National Weather Service is part of the National Oceanic and Atmospheric Administration (NOAA), not the National Weather Service.": -0.3,
+      "concept A": -0.16,
+      "concept B": -0.16,
+      "The student's answer to the first question is incorrect; they should identify the primary focus of meteorology as the study of atmospheric phenomena.": -0.3,
+      "The student's answer to the third question is incorrect; orographic effects are driven by topography, not by atmospheric circulation.": -0.3,
+      "concept C": -0.12,
+      "The student's answer to Q3 is incorrect; orographic lifting is caused by air rising over mountains, not by radiative cooling.": -0.3,
+      "The student's answer to Q4 is incorrect; radiative cooling refers to the process where the Earth's surface loses heat to the atmosphere through radiation, not the process of air cooling due to radiation.": -0.3,
+      "The difference between temperature and heat": 0.14,
+      "Atmospheric circulation patterns": 0.14,
+      "Long-term weather vs short-term weather forecasting": 0.14,
+      "The student's answer to question 4 is incorrect; the correct statement about temperature and heat is that heat is a form of energy transfer, while temperature is a measure of thermal energy.": -0.3,
+      "The student's answer to question 5 is incorrect; the correct answer is 'temperature', not 'conditions'.": -0.3,
+      "The student's answer is incorrect because they failed to identify the orographic effect, which is a meteorological phenomenon caused by air being forced to rise over mountains.": -0.3,
+      "The student's answer is incorrect because they did not recognize the orographic effect, which is a meteorological phenomenon caused by air being forced to rise over mountains.": -0.3,
+      "Climate vs Weather": -0.12,
+      "Orographic Lifting": -0.12,
+      "Radiative Forcing": -0.12,
+      "The student's answer to Q1 is factually incorrect: the primary focus areas of meteorology are atmospheric science and weather forecasting, not orographic effects.": -0.3,
+      "The student's answer to Q2 is factually incorrect: the primary energy source for the Earth's atmosphere is solar radiation, not geothermal energy, and the term 'weather' refers to short-term atmospheric phenomena, not long-term climate patterns.": -0.3,
+      "Concept A: Orographic lifting and cloud formation": -0.04,
+      "Concept B: Temperature vs. heat and radiation": -0.04,
+      "Concept C: The primary driver of seasonal variations in weather": -0.04,
+      "The student's answer to Q1 is incorrect; the NWS primarily forecasts weather and provides warnings, not meteorological research.": -0.3,
+      "The student's answer to Q3 is incorrect; cloud formation is primarily caused by convection, not precipitation.": -0.3,
+      "Concept A: Orographic Lifting": -0.12,
+      "Concept B: Temperature vs. Heat": -0.12,
+      "Concept C: Atmospheric Circulation": -0.12,
+      "The student struggled to identify the primary energy source powering Earth's weather systems.": -0.3,
+      "The student failed to recognize the correct answer to the first question about cloud formation.": -0.3,
+      "Atmospheric Science": -0.12,
+      "Orographic Effects": -0.12,
+      "Temperature vs. Heat": -0.12,
+      "The student missed the primary focus of meteorology, which is atmospheric science.": -0.3,
+      "The student misunderstood the difference between temperature and heat.": -0.3
     },
     "source_rewards": {
-      "wikipedia.org": 0.715,
-      "pressbooks-dev.oer.hawaii.edu": 0.715,
-      "pressbooks.lib.vt.edu": 0.715,
-      "weather.gov": 0.715
+      "wikipedia.org": -0.1525,
+      "epa.gov": -0.1175,
+      "britannica.com": -0.1175,
+      "weather.gov": -0.1525,
+      "gpm.nasa.gov": -0.035,
+      "science.nasa.gov": -0.035
     },
     "history": [
       {
-        "timestamp": 1776560832.8823717,
-        "reward": 1.0,
-        "score": 1.0,
-        "score_delta": 1.0,
-        "passed": true,
-        "weak_areas": [],
-        "concept_gaps": []
+        "timestamp": 1776563714.294309,
+        "reward": -0.47,
+        "score": 0.0,
+        "score_delta": 0.0,
+        "passed": false,
+        "weak_areas": [
+          "meteorological concepts",
+          "climate vs weather",
+          "weather forecasting applications"
+        ],
+        "concept_gaps": [
+          "The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction.",
+          "The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating.",
+          "The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects.",
+          "The student's answer to Q4 is incorrect because thunderstorms in the Eastern Third of the Country are primarily associated with tropical cyclones, not orographic effects."
+        ]
       },
       {
-        "timestamp": 1776560877.9420722,
-        "reward": 0.93,
-        "score": 1.0,
-        "score_delta": 0.0,
-        "passed": true,
-        "weak_areas": [],
-        "concept_gaps": []
+        "timestamp": 1776563746.7161021,
+        "reward": 0.3,
+        "score": 0.4,
+        "score_delta": 0.4,
+        "passed": false,
+        "weak_areas": [
+          "weather forecasting accuracy",
+          "climate vs weather misconceptions",
+          "ocean-atmosphere interaction"
+        ],
+        "concept_gaps": [
+          "The student's answer to Q3 is incorrect because climate refers to long-term patterns, not short-term weather.",
+          "The student's answer to Q10 is incorrect because the National Weather Service is part of the National Oceanic and Atmospheric Administration (NOAA), not the National Weather Service."
+        ]
       },
       {
-        "timestamp": 1776560924.6128428,
-        "reward": 0.93,
-        "score": 1.0,
+        "timestamp": 1776563773.4548407,
+        "reward": 0.01,
+        "score": 0.4,
         "score_delta": 0.0,
+        "passed": false,
+        "weak_areas": [
+          "concept A",
+          "concept B"
+        ],
+        "concept_gaps": [
+          "The student's answer to the first question is incorrect; they should identify the primary focus of meteorology as the study of atmospheric phenomena.",
+          "The student's answer to the third question is incorrect; orographic effects are driven by topography, not by atmospheric circulation."
+        ]
+      },
+      {
+        "timestamp": 1776563795.778278,
+        "reward": -0.29,
+        "score": 0.25,
+        "score_delta": -0.15,
+        "passed": false,
+        "weak_areas": [
+          "concept A",
+          "concept B",
+          "concept C"
+        ],
+        "concept_gaps": [
+          "The student's answer to Q3 is incorrect; orographic lifting is caused by air rising over mountains, not by radiative cooling.",
+          "The student's answer to Q4 is incorrect; radiative cooling refers to the process where the Earth's surface loses heat to the atmosphere through radiation, not the process of air cooling due to radiation."
+        ]
+      },
+      {
+        "timestamp": 1776563822.9540465,
+        "reward": 0.13,
+        "score": 0.4,
+        "score_delta": 0.15,
+        "passed": false,
+        "weak_areas": [
+          "The difference between temperature and heat",
+          "Atmospheric circulation patterns",
+          "Long-term weather vs short-term weather forecasting"
+        ],
+        "concept_gaps": [
+          "The student's answer to question 4 is incorrect; the correct statement about temperature and heat is that heat is a form of energy transfer, while temperature is a measure of thermal energy.",
+          "The student's answer to question 5 is incorrect; the correct answer is 'temperature', not 'conditions'."
+        ]
+      },
+      {
+        "timestamp": 1776563845.0079296,
+        "reward": 0.91,
+        "score": 0.75,
+        "score_delta": 0.35,
         "passed": true,
-        "weak_areas": [],
-        "concept_gaps": []
+        "weak_areas": [
+          "The difference between temperature and heat",
+          "Atmospheric circulation patterns",
+          "Long-term weather vs short-term weather forecasting"
+        ],
+        "concept_gaps": [
+          "The student's answer is incorrect because they failed to identify the orographic effect, which is a meteorological phenomenon caused by air being forced to rise over mountains.",
+          "The student's answer is incorrect because they did not recognize the orographic effect, which is a meteorological phenomenon caused by air being forced to rise over mountains."
+        ]
+      },
+      {
+        "timestamp": 1776563871.613199,
+        "reward": -0.27,
+        "score": 0.4,
+        "score_delta": -0.35,
+        "passed": false,
+        "weak_areas": [
+          "Climate vs Weather",
+          "Orographic Lifting",
+          "Radiative Forcing"
+        ],
+        "concept_gaps": [
+          "The student's answer to Q1 is factually incorrect: the primary focus areas of meteorology are atmospheric science and weather forecasting, not orographic effects.",
+          "The student's answer to Q2 is factually incorrect: the primary energy source for the Earth's atmosphere is solar radiation, not geothermal energy, and the term 'weather' refers to short-term atmospheric phenomena, not long-term climate patterns."
+        ]
+      },
+      {
+        "timestamp": 1776563897.721947,
+        "reward": 0.21,
+        "score": 0.5,
+        "score_delta": 0.1,
+        "passed": false,
+        "weak_areas": [
+          "Concept A: Orographic lifting and cloud formation",
+          "Concept B: Temperature vs. heat and radiation",
+          "Concept C: The primary driver of seasonal variations in weather"
+        ],
+        "concept_gaps": [
+          "The student's answer to Q1 is incorrect; the NWS primarily forecasts weather and provides warnings, not meteorological research.",
+          "The student's answer to Q3 is incorrect; cloud formation is primarily caused by convection, not precipitation."
+        ]
+      },
+      {
+        "timestamp": 1776563921.6337247,
+        "reward": -0.5366,
+        "score": 0.1667,
+        "score_delta": -0.3333,
+        "passed": false,
+        "weak_areas": [
+          "Concept A: Orographic Lifting",
+          "Concept B: Temperature vs. Heat",
+          "Concept C: Atmospheric Circulation"
+        ],
+        "concept_gaps": [
+          "The student struggled to identify the primary energy source powering Earth's weather systems.",
+          "The student failed to recognize the correct answer to the first question about cloud formation."
+        ]
+      },
+      {
+        "timestamp": 1776563948.3641427,
+        "reward": -0.6034,
+        "score": 0.0,
+        "score_delta": -0.1667,
+        "passed": false,
+        "weak_areas": [
+          "Atmospheric Science",
+          "Orographic Effects",
+          "Temperature vs. Heat"
+        ],
+        "concept_gaps": [
+          "The student missed the primary focus of meteorology, which is atmospheric science.",
+          "The student misunderstood the difference between temperature and heat."
+        ]
       }
     ]
   },
   "flagged_statements": [
+    "The rainfall for the Great Lakes region could prolong the ongoing flooding.",
+    "Fact three: Climatological cycles, such as El Ni\u00f1o and La Ni\u00f1a, are long-term variations in atmospheric conditions that affect global weather patterns.",
+    "Fact five: A common misconception is that weather and climate are the same; climate describes long-term patterns, while weather refers to short-term conditions.",
+    "Fact six: The Coriolis effect, caused by the Earth's rotation, influences the direction of wind in the atmosphere, helping to form different weather patterns.",
+    "Fact seven: Hydrological processes, such as the water cycle, are essential for weather systems and affect regions like the Great Lakes region.",
+    "Atmospheric conditions include temperature, humidity, precipitation, and radiation.",
+    "Weather patterns are temporary changes in atmospheric conditions.",
+    "2026 SKYWARN Storm Spotter Training Schedule Spring 2026 Frost/Freeze Info (includes average/extreme last frost/freeze dates, etc...Sub-Freezing Temperatures Likely This Weekend (April 18-19) Experimental Graphical Hazardous Weather Outlook.",
+    "Nutrition Research Arrives Aboard Space Station \u2018Interstellar Glaciers\u2019: NASA\u2019s SPHEREx Maps Vast Galactic Ice Regions NASA Finds Young Stars Dim in X-rays Surprisingly Quickly.",
     "Showers and Thunderstorms for the Eastern Third of the Country; Fire Weather Concerns; Flooding Issues for the Great Lakes Region Showers and thunderstorms will continue along and ahead of a cold front for the eastern third of the country.",
     "The rainfall for the Great Lakes region could prolong the ongoing flooding.",
-    "Meteorology distinguishes itself from climatology by focusing on short-term atmospheric phenomena rather than long-term climate patterns.",
+    "Much cooler weather will filter in behind this cold front along and east of the Rockies.",
+    "Where the rain is needed, the Southern High Plains, critical fire weather concerns through this weekend.",
+    "Atmospheric conditions include temperature, humidity, pressure, and wind, which are measured using instruments such as thermometers, barometers, hygrometers, and anemometers.",
+    "Weather patterns are defined as recurring atmospheric conditions that typically occur in a specific region over a defined period, such as seasons, fronts, high and low-pressure systems, and cyclones.",
+    "Climatological cycles, such as monsoons and El Ni\u00f1o-Southern Oscillation (ENSO), represent large-scale climate patterns that influence regional weather over years or decades.",
+    "Seasonal variations are predictable shifts in temperature, precipitation, and daylight hours caused by the Earth's axial tilt and its orbit around the Sun.",
+    "Fact one: The average frost/freeze date in the US is typically around April 15-16, though this can vary by region.",
+    "Atmospheric conditions include temperature, humidity, pressure, and wind patterns.",
+    "2026 SKYWARN Storm Spotter Training Schedule Spring 2026 Frost/Freeze Info (includes average/extreme last frost/freeze dates, etc...Sub-Freezing Temperatures Likely This Weekend (April 18-19) Experimental Graphical Hazardous Weather Outlook.",
+    "Nutrition Research Arrives Aboard Space Station \u2018Interstellar Glaciers\u2019: NASA\u2019s SPHEREx Maps Vast Galactic Ice Regions NASA Finds Young Stars Dim in X-rays Surprisingly Quickly.",
     "Showers and Thunderstorms for the Eastern Third of the Country; Fire Weather Concerns; Flooding Issues for the Great Lakes Region Showers and thunderstorms will continue along and ahead of a cold front for the eastern third of the country.",
     "The rainfall for the Great Lakes region could prolong the ongoing flooding.",
+    "Much cooler weather will filter in behind this cold front along and east of the Rockies.",
+    "Where the rain is needed, the Southern High Plains, critical fire weather concerns through this weekend.",
+    "The Coriolis effect causes wind patterns to rotate, resulting in distinct climate zones such as deserts, tropical rainforests, and temperate regions.",
+    "Common misconception: Weather and climate are the same. A common misconception is that weather is long-term; weather refers to short-term atmospheric conditions, whereas climate describes the average weather patterns in a region over decades.",
+    "The study of Earth's atmosphere is called meteorology.",
+    "The National Weather Service offers student opportunities for hands-on weather education.",
+    "2026 SKYWARN Storm Spotter Training Schedule Spring 2026 Frost/Freeze Info (includes average/extreme last frost/freeze dates, etc...Sub-Freezing Temperatures Likely This Weekend (April 18-19) Experimental Graphical Hazardous Weather Outlook.",
+    "Nutrition Research Arrives Aboard Space Station \u2018Interstellar Glaciers\u2019: NASA\u2019s SPHEREx Maps Vast Galactic Ice Regions NASA Finds Young Stars Dim in X-rays Surprisingly Quickly.",
     "Showers and Thunderstorms for the Eastern Third of the Country; Fire Weather Concerns; Flooding Issues for the Great Lakes Region Showers and thunderstorms will continue along and ahead of a cold front for the eastern third of the country.",
-    "The rainfall for the Great Lakes region could prolong the ongoing flooding."
+    "The rainfall for the Great Lakes region could prolong the ongoing flooding.",
+    "Much cooler weather will filter in behind this cold front along and east of the Rockies.",
+    "Where the rain is needed, the Southern High Plains, critical fire weather concerns through this weekend.",
+    "A common misconception that weather patterns are random is actually influenced by large-scale climate cycles such as El Ni\u00f1o and La Ni\u00f1a.",
+    "Atmospheric conditions are the physical properties of the air in the Earth's atmosphere, including temperature, pressure, humidity, and wind.",
+    "Weather patterns are large-scale atmospheric phenomena that result from interactions between air masses and the Earth's surface.",
+    "2026 SKYWARN Storm Spotter Training Schedule Spring 2026 Frost/Freeze Info (includes average/extreme last frost/freeze dates, etc...Sub-Freezing Temperatures Likely This Weekend (April 18-19) Experimental Graphical Hazardous Weather Outlook.",
+    "Nutrition Research Arrives Aboard Space Station \u2018Interstellar Glaciers\u2019: NASA\u2019s SPHEREx Maps Vast Galactic Ice Regions NASA Finds Young Stars Dim in X-rays Surprisingly Quickly.",
+    "Showers and Thunderstorms for the Eastern Third of the Country; Fire Weather Concerns; Flooding Issues for the Great Lakes Region Showers and thunderstorms will continue along and ahead of a cold front for the eastern third of the country.",
+    "The rainfall for the Great Lakes region could prolong the ongoing flooding.",
+    "Much cooler weather will filter in behind this cold front along and east of the Rockies.",
+    "Where the rain is needed, the Southern High Plains, critical fire weather concerns through this weekend.",
+    "High-pressure systems (anticyclones) are typically associated with clear skies and calm winds, while low-pressure systems (cyclones) bring precipitation and stormy weather.",
+    "2026 SKYWARN Storm Spotter Training Schedule Spring 2026 Frost/Freeze Info (includes average/extreme last frost/freeze dates, etc...Sub-Freezing Temperatures Likely This Weekend (April 18-19) Experimental Graphical Hazardous Weather Outlook.",
+    "Nutrition Research Arrives Aboard Space Station \u2018Interstellar Glaciers\u2019: NASA\u2019s SPHEREx Maps Vast Galactic Ice Regions NASA Finds Young Stars Dim in X-rays Surprisingly Quickly.",
+    "Showers and Thunderstorms for the Eastern Third of the Country; Fire Weather Concerns; Flooding Issues for the Great Lakes Region Showers and thunderstorms will continue along and ahead of a cold front for the eastern third of the country.",
+    "The rainfall for the Great Lakes region could prolong the ongoing flooding.",
+    "Much cooler weather will filter in behind this cold front along and east of the Rockies.",
+    "Where the rain is needed, the Southern High Plains, critical fire weather concerns through this weekend.",
+    "2026 SKYWARN Storm Spotter Training Schedule Spring 2026 Frost/Freeze Info (includes average/extreme last frost/freeze dates, etc...Sub-Freezing Temperatures Likely This Weekend (April 18-19) Experimental Graphical Hazardous Weather Outlook.",
+    "Nutrition Research Arrives Aboard Space Station \u2018Interstellar Glaciers\u2019: NASA\u2019s SPHEREx Maps Vast Galactic Ice Regions NASA Finds Young Stars Dim in X-rays Surprisingly Quickly.",
+    "Showers and Thunderstorms for the Eastern Third of the Country; Fire Weather Concerns; Flooding Issues for the Great Lakes Region Showers and thunderstorms will continue along and ahead of a cold front for the eastern third of the country.",
+    "The rainfall for the Great Lakes region could prolong the ongoing flooding.",
+    "Much cooler weather will filter in behind this cold front along and east of the Rockies.",
+    "Where the rain is needed, the Southern High Plains, critical fire weather concerns through this weekend.",
+    "The jet stream does not exist as a physical entity but is an atmospheric phenomenon that moves west to east relative to the Earth's surface.",
+    "The SPHEREx mission maps ice regions in distant galaxies.",
+    "2026 SKYWARN Storm Spotter Training Schedule Spring 2026 Frost/Freeze Info (includes average/extreme last frost/freeze dates, etc...Sub-Freezing Temperatures Likely This Weekend (April 18-19) Experimental Graphical Hazardous Weather Outlook.",
+    "Nutrition Research Arrives Aboard Space Station \u2018Interstellar Glaciers\u2019: NASA\u2019s SPHEREx Maps Vast Galactic Ice Regions NASA Finds Young Stars Dim in X-rays Surprisingly Quickly.",
+    "Showers and Thunderstorms for the Eastern Third of the Country; Fire Weather Concerns; Flooding Issues for the Great Lakes Region Showers and thunderstorms will continue along and ahead of a cold front for the eastern third of the country.",
+    "The rainfall for the Great Lakes region could prolong the ongoing flooding.",
+    "Much cooler weather will filter in behind this cold front along and east of the Rockies.",
+    "Where the rain is needed, the Southern High Plains, critical fire weather concerns through this weekend.",
+    "Common misconception corrected: Wind and precipitation are not the same thing.",
+    "Orographic effects occur when moist air is forced to rise over mountains, cooling and condensing to form clouds and precipitation.",
+    "2026 SKYWARN Storm Spotter Training Schedule Spring 2026 Frost/Freeze Info (includes average/extreme last frost/freeze dates, etc...Sub-Freezing Temperatures Likely This Weekend (April 18-19) Experimental Graphical Hazardous Weather Outlook.",
+    "Nutrition Research Arrives Aboard Space Station \u2018Interstellar Glaciers\u2019: NASA\u2019s SPHEREx Maps Vast Galactic Ice Regions NASA Finds Young Stars Dim in X-rays Surprisingly Quickly.",
+    "Showers and Thunderstorms for the Eastern Third of the Country; Fire Weather Concerns; Flooding Issues for the Great Lakes Region Showers and thunderstorms will continue along and ahead of a cold front for the eastern third of the country.",
+    "The rainfall for the Great Lakes region could prolong the ongoing flooding.",
+    "Much cooler weather will filter in behind this cold front along and east of the Rockies.",
+    "Where the rain is needed, the Southern High Plains, critical fire weather concerns through this weekend.",
+    "A common misconception is that the Earth's climate system is solely driven by solar radiation, but Earth's long-term climate cycles (like ice ages) are primarily driven by changes in Earth's orbit and axial tilt.",
+    "2026 SKYWARN Storm Spotter Training Schedule Spring 2026 Frost/Freeze Info (includes average/extreme last frost/freeze dates, etc...Sub-Freezing Temperatures Likely This Weekend (April 18-19) Experimental Graphical Hazardous Weather Outlook.",
+    "Nutrition Research Arrives Aboard Space Station \u2018Interstellar Glaciers\u2019: NASA\u2019s SPHEREx Maps Vast Galactic Ice Regions NASA Finds Young Stars Dim in X-rays Surprisingly Quickly.",
+    "Showers and Thunderstorms for the Eastern Third of the Country; Fire Weather Concerns; Flooding Issues for the Great Lakes Region Showers and thunderstorms will continue along and ahead of a cold front for the eastern third of the country.",
+    "The rainfall for the Great Lakes region could prolong the ongoing flooding.",
+    "Much cooler weather will filter in behind this cold front along and east of the Rockies.",
+    "Where the rain is needed, the Southern High Plains, critical fire weather concerns through this weekend."
   ],
   "cycle_history": [
     {
       "cycle": 1,
-      "timestamp": 1776560832.877634,
-      "score": 1.0,
-      "passed": true,
-      "concept_gaps": [],
+      "timestamp": 1776563714.0403302,
+      "score": 0.0,
+      "passed": false,
+      "concept_gaps": [
+        "The student's answer to Q1 is incorrect because meteorology focuses on atmospheric science, not weather prediction.",
+        "The student's answer to Q2 is incorrect because orographic effects are primarily caused by terrain forcing air to rise, not by direct solar heating.",
+        "The student's answer to Q3 is incorrect because atmospheric temperature is primarily influenced by solar radiation, not orographic effects.",
+        "The student's answer to Q4 is incorrect because thunderstorms in the Eastern Third of the Country are primarily associated with tropical cyclones, not orographic effects."
+      ],
       "weak_areas": [],
       "n_statements_added": 17
     },
     {
       "cycle": 2,
-      "timestamp": 1776560877.9371772,
-      "score": 1.0,
-      "passed": true,
-      "concept_gaps": [],
-      "weak_areas": [],
-      "n_statements_added": 17
+      "timestamp": 1776563746.3974707,
+      "score": 0.4,
+      "passed": false,
+      "concept_gaps": [
+        "The student's answer to Q3 is incorrect because climate refers to long-term patterns, not short-term weather.",
+        "The student's answer to Q10 is incorrect because the National Weather Service is part of the National Oceanic and Atmospheric Administration (NOAA), not the National Weather Service."
+      ],
+      "weak_areas": [
+        "meteorological concepts",
+        "climate vs weather",
+        "weather forecasting applications"
+      ],
+      "n_statements_added": 5
     },
     {
       "cycle": 3,
-      "timestamp": 1776560924.6079352,
-      "score": 1.0,
+      "timestamp": 1776563773.2242181,
+      "score": 0.4,
+      "passed": false,
+      "concept_gaps": [
+        "The student's answer to the first question is incorrect; they should identify the primary focus of meteorology as the study of atmospheric phenomena.",
+        "The student's answer to the third question is incorrect; orographic effects are driven by topography, not by atmospheric circulation."
+      ],
+      "weak_areas": [
+        "weather forecasting accuracy",
+        "climate vs weather misconceptions",
+        "ocean-atmosphere interaction"
+      ],
+      "n_statements_added": 11
+    },
+    {
+      "cycle": 4,
+      "timestamp": 1776563795.526099,
+      "score": 0.25,
+      "passed": false,
+      "concept_gaps": [
+        "The student's answer to Q3 is incorrect; orographic lifting is caused by air rising over mountains, not by radiative cooling.",
+        "The student's answer to Q4 is incorrect; radiative cooling refers to the process where the Earth's surface loses heat to the atmosphere through radiation, not the process of air cooling due to radiation."
+      ],
+      "weak_areas": [
+        "concept A",
+        "concept B"
+      ],
+      "n_statements_added": 11
+    },
+    {
+      "cycle": 5,
+      "timestamp": 1776563822.6050615,
+      "score": 0.4,
+      "passed": false,
+      "concept_gaps": [
+        "The student's answer to question 4 is incorrect; the correct statement about temperature and heat is that heat is a form of energy transfer, while temperature is a measure of thermal energy.",
+        "The student's answer to question 5 is incorrect; the correct answer is 'temperature', not 'conditions'."
+      ],
+      "weak_areas": [
+        "concept A",
+        "concept B",
+        "concept C"
+      ],
+      "n_statements_added": 14
+    },
+    {
+      "cycle": 6,
+      "timestamp": 1776563845.002346,
+      "score": 0.75,
       "passed": true,
-      "concept_gaps": [],
-      "weak_areas": [],
-      "n_statements_added": 18
+      "concept_gaps": [
+        "The student's answer is incorrect because they failed to identify the orographic effect, which is a meteorological phenomenon caused by air being forced to rise over mountains.",
+        "The student's answer is incorrect because they did not recognize the orographic effect, which is a meteorological phenomenon caused by air being forced to rise over mountains."
+      ],
+      "weak_areas": [
+        "The difference between temperature and heat",
+        "Atmospheric circulation patterns",
+        "Long-term weather vs short-term weather forecasting"
+      ],
+      "n_statements_added": 8
+    },
+    {
+      "cycle": 7,
+      "timestamp": 1776563871.3150034,
+      "score": 0.4,
+      "passed": false,
+      "concept_gaps": [
+        "The student's answer to Q1 is factually incorrect: the primary focus areas of meteorology are atmospheric science and weather forecasting, not orographic effects.",
+        "The student's answer to Q2 is factually incorrect: the primary energy source for the Earth's atmosphere is solar radiation, not geothermal energy, and the term 'weather' refers to short-term atmospheric phenomena, not long-term climate patterns."
+      ],
+      "weak_areas": [
+        "The difference between temperature and heat",
+        "Atmospheric circulation patterns",
+        "Long-term weather vs short-term weather forecasting"
+      ],
+      "n_statements_added": 13
+    },
+    {
+      "cycle": 8,
+      "timestamp": 1776563897.2326787,
+      "score": 0.5,
+      "passed": false,
+      "concept_gaps": [
+        "The student's answer to Q1 is incorrect; the NWS primarily forecasts weather and provides warnings, not meteorological research.",
+        "The student's answer to Q3 is incorrect; cloud formation is primarily caused by convection, not precipitation."
+      ],
+      "weak_areas": [
+        "Climate vs Weather",
+        "Orographic Lifting",
+        "Radiative Forcing"
+      ],
+      "n_statements_added": 13
+    },
+    {
+      "cycle": 9,
+      "timestamp": 1776563921.2671568,
+      "score": 0.1667,
+      "passed": false,
+      "concept_gaps": [
+        "The student struggled to identify the primary energy source powering Earth's weather systems.",
+        "The student failed to recognize the correct answer to the first question about cloud formation."
+      ],
+      "weak_areas": [
+        "Concept A: Orographic lifting and cloud formation",
+        "Concept B: Temperature vs. heat and radiation",
+        "Concept C: The primary driver of seasonal variations in weather"
+      ],
+      "n_statements_added": 14
+    },
+    {
+      "cycle": 10,
+      "timestamp": 1776563948.06304,
+      "score": 0.0,
+      "passed": false,
+      "concept_gaps": [
+        "The student missed the primary focus of meteorology, which is atmospheric science.",
+        "The student misunderstood the difference between temperature and heat."
+      ],
+      "weak_areas": [
+        "Concept A: Orographic Lifting",
+        "Concept B: Temperature vs. Heat",
+        "Concept C: Atmospheric Circulation"
+      ],
+      "n_statements_added": 15
     }
   ],
-  "weak_areas": [],
-  "topic_retry_count": 3,
-  "session_best_score": 1.0
+  "weak_areas": [
+    "Atmospheric Science",
+    "Orographic Effects",
+    "Temperature vs. Heat"
+  ],
+  "topic_retry_count": 1,
+  "session_best_score": 0.75
 }

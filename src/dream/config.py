@@ -58,21 +58,21 @@ class DreamConfig:
         base_url=LOCAL_BASE_URL,
         api_key=LOCAL_API_KEY,
         temperature=0.3,       # low temp for grading / verification
-        max_tokens=1024,
-        context_window=4096,
-        timeout=60.0,
+        max_tokens=2048,
+        context_window=8192,
+        timeout=120.0,
     ))
 
     # ── Cycle parameters ───────────────────────────────────────────────────
-    gather_queries_per_model: int = 3   # queries each model fires per gather phase
-    questions_per_test: int = 10        # questions the cloud generates per test
+    gather_queries_per_model: int = 10   # queries each model fires per gather phase
+    questions_per_test: int = 100        # questions the cloud generates per test
     min_verify_confidence: float = 0.6  # 0–1 threshold; below = data flagged
     passing_score: float = 0.70         # grade at which a topic is "learned"
     max_topic_retries: int = 5          # cycles before moving past a topic
 
     # ── Session parameters ─────────────────────────────────────────────────
     target_duration_hours: float = 4.0
-    checkpoint_every_n_cycles: int = 5
+    checkpoint_every_n_cycles: int = 10
     memory_path: str = "dream_memory.json"
     log_path: str = "dream.log"
     resume_existing: bool = False
@@ -84,11 +84,11 @@ class DreamConfig:
 
     # ── Internet research ──────────────────────────────────────────────────
     research_enabled: bool = True
-    research_max_sources: int = 4
-    research_statement_limit: int = 8
-    research_chars_per_source: int = 700
-    research_max_context_chars: int = 2400
-    research_timeout_seconds: float = 15.0
+    research_max_sources: int = 15
+    research_statement_limit: int = 15
+    research_chars_per_source: int = 1500
+    research_max_context_chars: int = 12000
+    research_timeout_seconds: float = 30.0
     research_refresh_seconds: float = 900.0
 
     # ── VRAM guard ─────────────────────────────────────────────────────────

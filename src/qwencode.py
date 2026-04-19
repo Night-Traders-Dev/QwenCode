@@ -74,7 +74,7 @@ from tools.api import agentic_turn_api
 from config.config import MISSING, HISTORY_FILE, LOCAL_BASE_URL, LOCAL_API_KEY, load_config, save_config, BROWSER_DATA_DIR, MAX_TOOL_ITERS
 from config.prompt import build_prompt_session, get_input, handle_slash
 from browser.session import browser_session
-from dream.context import build_runtime_system_prompt
+from dream.context import build_runtime_system_prompt, enrich_user_with_dream_recall
 from ui.home import print_home_dashboard
 from ui.rich_ui import console
 from ui.live_render import C
@@ -310,7 +310,8 @@ def main():
             messages[0]["content"] = runtime_system_prompt
         else:
             messages.insert(0, {"role": "system", "content": runtime_system_prompt})
-        messages.append({"role": "user", "content": user_input})
+        model_user_input = enrich_user_with_dream_recall(user_input, memory_store=memory_store)
+        messages.append({"role": "user", "content": model_user_input})
         console.print()
 
         try:

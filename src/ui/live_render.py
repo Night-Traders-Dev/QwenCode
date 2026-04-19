@@ -546,6 +546,96 @@ def build_semantic_renderable(text: str, title: str = "Response"):
     return None
 
 
+def _format_weather_text(title: str, weather: dict) -> str:
+    lines = [f"{title}: {weather.get('location') or 'Weather Report'}"]
+    if weather.get("timestamp"):
+        lines.append(f"As of {weather['timestamp']}")
+    lines.append("")
+    lines.append("Current Conditions")
+    for label, value in [
+        ("Conditions", weather.get("conditions")),
+        ("Temperature", weather.get("temperature")),
+        ("Feels like", weather.get("feels_like")),
+        ("Humidity", weather.get("humidity")),
+        ("Wind", weather.get("wind")),
+        ("UV index", weather.get("uv_index")),
+        ("Visibility", weather.get("visibility")),
+    ]:
+        if value:
+            lines.append(f"- {label}: {value}")
+    if weather.get("today"):
+        lines.extend(["", "Today", weather["today"]])
+    if weather.get("daily"):
+        lines.extend(["", "Extended Forecast"])
+        for row in weather["daily"]:
+            lines.append(f"- {row['day']}: high {row['high']}, low {row['low']}, {row['detail']}")
+    if weather.get("note"):
+        lines.extend(["", "Advisory", weather["note"]])
+    if weather.get("source"):
+        lines.extend(["", f"Source: {weather['source']}"])
+    return "\n".join(lines).strip()
+
+
+def _format_dream_text(title: str, report: dict) -> str:
+    lines = [
+        f"{title}: {report.get('topic') or 'Dream Summary'}",
+        f"Knowledge statements: {report.get('knowledge', '0')}",
+        f"Flagged statements: {report.get('flagged', '0')}",
+        f"Best score: {report.get('best_score', '0.0%')}",
+        f"Cycles: {len(report.get('cycles') or [])}",
+    ]
+    if report.get("subtopics"):
+        lines.extend(["", "Subtopics"] + [f"- {item}" for item in report["subtopics"]])
+    if report.get("weak_areas"):
+        lines.extend(["", "Weak Areas"] + [f"- {item}" for item in report["weak_areas"]])
+    if report.get("cycles"):
+        lines.extend(["", "Recent Cycles"])
+        for cycle in report["cycles"]:
+            lines.append(
+                f"- Cycle {cycle['cycle']}: score {cycle['score']}, passed {cycle['passed']}, added {cycle['added']}"
+            )
+    return "\n".join(lines).strip()
+
+
+def _format_knowledge_text(title: str, result: dict) -> str:
+    lines = [f"{title}: knowledge backend {result['backend']}", ""]
+    for row in result["rows"]:
+        lines.append(f"- {row['key']} [{row['category']}]")
+        if row.get("preview"):
+            lines.append(f"  {row['preview']}")
+    return "\n".join(lines).strip()
+
+
+def _format_fact_sheet_text(title: str, pairs: list[tuple[str, str]]) -> str:
+    lines = [title]
+    lines.extend(f"{key}: {value}" for key, value in pairs)
+    return "\n".join(lines).strip()
+
+
+def format_response_text(text: str, title: str = "Response") -> str:
+    cleaned = normalize_markdown(text)
+    if not cleaned:
+        return ""
+
+    weather = _parse_weather_report(text)
+    if weather:
+        return _format_weather_text(title, weather)
+
+    dream = _parse_dream_report(text)
+    if dream:
+        return _format_dream_text(title, dream)
+
+    knowledge = _parse_knowledge_search(text)
+    if knowledge:
+        return _format_knowledge_text(title, knowledge)
+
+    fact_sheet = _parse_fact_sheet(text)
+    if fact_sheet:
+        return _format_fact_sheet_text(title, fact_sheet)
+
+    return cleaned
+
+
 def render_response(text: str, title: str = "Response"):
     """Render assistant output in a readable, width-aware layout."""
     cleaned = normalize_markdown(text)

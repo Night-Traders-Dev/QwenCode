@@ -12,18 +12,21 @@ QwenCode is a terminal-first Qwen harness with a browser runner, a local helper 
 - Stores conversation, tool output, audits, and Dream knowledge in **PostgreSQL** or file fallback
 - Ships a **Home UI** and section navigation for workspace, models, memory, tools, and Dream
 - Renders answers more intelligently, including a **weather-style report view** for forecast-heavy responses
+- Keeps a **fullscreen browser shell** with a permanent top status bar, a permanent bottom input, and scrollable output in the middle
 - Includes a **Dream live UI** for Gather → Verify → Examine → Adapt sessions
 
 ## Highlights
 
 - **Home dashboard** on startup with `/home` and `/go <section>`
 - **Professional terminal rendering** with responsive status panels and structured answer views
+- **Claude Code-style browser input loop** so you can queue prompts even while the current task is still running
 - **Semantic response rendering** for weather reports, Dream summaries, knowledge hits, and improved markdown fallback
 - **Dream loop** with live progress UI, session summaries, and PostgreSQL sync
 - **Default Dream research lane** that pulls fresh evidence from trusted internet sources and feeds it into Gather, Verify, Examine, and Adapt
 - **Reinforcement-style curriculum memory** that tracks which concepts and source domains are helping or hurting progress
 - **Dream source recall** that reuses prior trusted sources from PostgreSQL before falling back to the open web again
 - **Dream-aware model context** so the cloud, browser, and local helper lanes know where Dream files, logs, schemas, and knowledge categories live
+- **Proactive Dream recall for research-heavy prompts** so the main assistant mines `dream_source`, `dream_knowledge`, and Dream summaries before answering
 - **Dream cloud fallback** to the local 4B lane when the remote orchestrator is unavailable or misconfigured
 - **Expanded toolset** for file reads, chunked file reads, shell, git, knowledge search, and Dream inspection
 - **Structured tool-result views** so diagnostics and memory hits land as UI instead of raw log text
@@ -92,6 +95,15 @@ python src/qwencode.py
 python src/qwencode.py --browser
 ```
 
+Browser mode now launches a fullscreen shell by default:
+
+- permanent status bar at the top
+- permanent input at the bottom
+- rendered answers in the middle
+- queued prompts accepted while another task is running
+
+Set `terminal_shell_enabled` to `false` in config if you need the legacy browser loop.
+
 ### Headless browser mode
 
 ```bash
@@ -156,7 +168,9 @@ The runtime prompt context now also includes Dream system details for the main A
 - Dream and memory-style summaries can be rendered as **diagnostic dashboards**
 - knowledge search results can be rendered as **search tables**
 - the status panel is multi-row and width-aware instead of a single overflow line
-- browser-mode answers are shown as soon as the main response is ready, while the audit continues in the background
+- the browser shell keeps status pinned to the top and input pinned to the bottom while output scrolls in between
+- browser-mode prompts can be queued while the current task is still in progress
+- shell-mode answers are normalized into readable text layouts, including weather-style reports
 
 ### Weather report rendering
 
@@ -243,6 +257,7 @@ QwenCode memory stores:
 - durable knowledge rows
 - session metadata
 - Dream summaries, cycle reports, and verified Dream knowledge
+- retrieved Dream sources and research evidence that can be recalled later by both Dream runs and the main assistant
 
 ### Backends
 
@@ -264,6 +279,7 @@ Dream now writes:
 
 Rows are keyed with the Dream session id so separate Dream runs on the same topic do not overwrite one another.
 Stored `dream_source` rows can also be recalled in later Dream runs for the same topic, so PostgreSQL acts as both a memory log and a reusable research cache.
+Research-heavy assistant prompts also mine relevant `dream_source`, `dream_knowledge`, and `dream_summary` rows before the main response is generated.
 
 ## Dream mode
 

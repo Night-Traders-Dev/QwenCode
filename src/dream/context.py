@@ -5,6 +5,7 @@ dream/context.py - Shared Dream runtime context for models, tools, and UI.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any, Optional
 
@@ -17,6 +18,27 @@ DREAM_ENTRYPOINT = SRC_ROOT / "run_dream.py"
 DREAM_PACKAGE_DIR = SRC_ROOT / "dream"
 DREAM_MEMORY_CLASS = DREAM_PACKAGE_DIR / "memory" / "dream_memory.py"
 DREAM_SESSION_FILE = DREAM_PACKAGE_DIR / "session.py"
+RESEARCH_HEAVY_MARKERS = (
+    "research",
+    "source",
+    "citation",
+    "evidence",
+    "explain",
+    "analyze",
+    "compare",
+    "forecast",
+    "weather",
+    "trend",
+    "study",
+    "learn",
+    "latest",
+    "what is",
+    "how does",
+    "why does",
+    "tell me about",
+    "deep dive",
+    "summary",
+)
 
 
 def _sorted_unique_paths(paths: list[Path], limit: int) -> list[Path]:
@@ -189,6 +211,139 @@ def build_runtime_system_prompt(
     )
 
 
+def is_research_heavy_prompt(user_input: str) -> bool:
+    text = " ".join((user_input or "").strip().lower().split())
+    if not text:
+        return False
+    if any(marker in text for marker in RESEARCH_HEAVY_MARKERS):
+        return True
+    if "?" in text and len(text.split()) >= 8:
+        return True
+    return len(text.split()) >= 18
+
+
+def _extract_terms(text: str, limit: int = 8) -> list[str]:
+    tokens = re.findall(r"[a-z0-9][a-z0-9._-]{2,}", (text or "").lower())
+    seen: set[str] = set()
+    terms: list[str] = []
+    for token in tokens:
+        if token in seen:
+            continue
+        seen.add(token)
+        terms.append(token)
+        if len(terms) >= limit:
+            break
+    return terms
+
+
+def _build_memory_query(user_input: str) -> str:
+    terms = _extract_terms(user_input)
+    if terms:
+        return " ".join(terms)
+    return (user_input or "").strip()[:240]
+
+
+def _clip(text: str, limit: int = 220) -> str:
+    normalized = " ".join((text or "").split())
+    if len(normalized) <= limit:
+        return normalized
+    return normalized[: limit - 3].rstrip() + "..."
+
+
+def _format_recall_row(category: str, content: str) -> str:
+    if category == "dream_source":
+        try:
+            payload = json.loads(content)
+        except Exception:
+            payload = {}
+        title = _clip(str(payload.get("title", "") or "Untitled source"), 90)
+        domain = str(payload.get("domain", "") or "unknown")
+        url = str(payload.get("url", "") or "")
+        snippet = _clip(str(payload.get("snippet", "") or payload.get("summary", "") or ""), 140)
+        parts = [f"{title} [{domain}]"]
+        if snippet:
+            parts.append(snippet)
+        if url:
+            parts.append(url)
+        return " | ".join(parts)
+
+    if category == "dream_summary":
+        try:
+            payload = json.loads(content)
+        except Exception:
+            payload = {}
+        topic = str(payload.get("topic", "") or "Dream summary")
+        summary = _clip(str(payload.get("summary", "") or content), 180)
+        return f"{topic}: {summary}"
+
+    return _clip(content, 180)
+
+
+def build_dream_recall_context(
+    user_input: str,
+    memory_store: Any = None,
+    limit_per_category: int = 2,
+    max_items: int = 6,
+) -> str:
+    if memory_store is None or not is_research_heavy_prompt(user_input):
+        return ""
+
+    query = _build_memory_query(user_input)
+    if not query:
+        return ""
+
+    categories = ("dream_knowledge", "dream_source", "dream_summary")
+    recalled: list[str] = []
+
+    for category in categories:
+        try:
+            rows = memory_store.search_knowledge(query, limit=limit_per_category, category=category)
+        except Exception:
+            rows = []
+
+        for row in rows:
+            content = str(row.get("content", "") or "").strip()
+            if not content:
+                continue
+            recalled.append(f"- {category}: {_format_recall_row(category, content)}")
+            if len(recalled) >= max_items:
+                break
+        if len(recalled) >= max_items:
+            break
+
+    if not recalled and hasattr(memory_store, "list_knowledge"):
+        try:
+            fallback_rows = memory_store.list_knowledge(category="dream_source", limit=min(limit_per_category, 2))
+        except Exception:
+            fallback_rows = []
+        for row in fallback_rows:
+            content = str(row.get("content", "") or "").strip()
+            if not content:
+                continue
+            recalled.append(f"- dream_source: {_format_recall_row('dream_source', content)}")
+            if len(recalled) >= max_items:
+                break
+
+    if not recalled:
+        return ""
+
+    return (
+        "Relevant Dream memory recalled for this request:\n"
+        + "\n".join(recalled)
+        + "\nUse recalled Dream facts as working context. Prefer Dream source URLs when citing research-derived claims."
+    )
+
+
+def enrich_user_with_dream_recall(
+    user_input: str,
+    memory_store: Any = None,
+) -> str:
+    recall = build_dream_recall_context(user_input, memory_store=memory_store)
+    if not recall:
+        return user_input
+    return recall + "\n\nUser request:\n" + user_input
+
+
 def wrap_user_with_runtime_context(
     user_input: str,
     cfg: Optional[dict] = None,
@@ -197,10 +352,13 @@ def wrap_user_with_runtime_context(
     cwd: str | Path | None = None,
 ) -> str:
     context = build_dream_system_context(cfg=cfg, memory_store=memory_store, cwd=cwd, include_schema=False)
+    recall = build_dream_recall_context(user_input, memory_store=memory_store)
+    recall_block = ("\n\n" + recall) if recall else ""
     return (
         "QwenCode runtime context (use as operating context; do not restate it unless relevant):\n"
         + context
         + f"\n- Active mode: {mode}"
+        + recall_block
         + "\n\nUser request:\n"
         + user_input
     )

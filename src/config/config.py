@@ -60,7 +60,7 @@ def get_model_display_name(model_id: str) -> str:
 
 
 MISSING = []
-VERSION          = "0.5.0"
+VERSION          = "0.0.1"
 CONFIG_DIR       = Path.home() / ".qwencode"
 CONFIG_FILE      = CONFIG_DIR / "config.json"
 HISTORY_FILE     = CONFIG_DIR / "history"
@@ -71,7 +71,7 @@ DEFAULT_MODEL      = "qwen3-coder-plus"
 LOCAL_BASE_URL     = "http://localhost:11434/v1"
 LOCAL_API_KEY      = "ollama"
 LOCAL_MODEL        = CLAUDE_OPUS_MODEL  #"qwen3.5:4b"
-LOCAL_FAST_MODEL   = CLAUDE_OPUS_MODEL  #"qwen3.5:0.8b"
+LOCAL_FAST_MODEL   = "Qwen/Qwen3.5-0.8B"
 MEGAKERNEL_MODEL   = "Qwen/Qwen3.5-0.8B"
 MEGAKERNEL_PATH    = "third_party/mirage"
 

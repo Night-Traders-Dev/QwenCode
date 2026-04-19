@@ -12,6 +12,7 @@ from config.config import (
     DEFAULT_MODEL,
     LOCAL_API_KEY,
     LOCAL_BASE_URL,
+    CLAUDE_OPUS_MODEL
     load_config,
 )
 
@@ -42,7 +43,7 @@ class DreamConfig:
         timeout=300.0,
     ))
     medium: ModelConfig = field(default_factory=lambda: ModelConfig(
-        name="qwen3.5:4b",
+        name=CLAUDE_OPUS_MODEL,  #"qwen3.5:4b",
         role="medium-student",
         base_url=LOCAL_BASE_URL,
         api_key=LOCAL_API_KEY,
@@ -52,7 +53,7 @@ class DreamConfig:
         timeout=120.0,
     ))
     small: ModelConfig = field(default_factory=lambda: ModelConfig(
-        name="qwen3.5:0.8b",
+        name=CLAUDE_OPUS_MODEL,  # "qwen3.5:0.8b",
         role="small-verifier",
         base_url=LOCAL_BASE_URL,
         api_key=LOCAL_API_KEY,

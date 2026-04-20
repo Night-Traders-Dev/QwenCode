@@ -227,7 +227,7 @@ class DreamSession:
 
         await asyncio.sleep(cfg.local_inference_cooldown)
         self._ui_set_phase("Verify", "running", f"Fact-checking {len(raw_statements)} statements")
-        _verified, _flagged = await phase_verify(topic, raw_statements, memory, small, cfg, medium=medium)
+        _verified, _flagged = await phase_verify(topic, raw_statements, memory, small, cfg)
         memory.add_verified_statements([], cycle=cycle)
         await self._persist_verified_statements(_verified)
         self._ui_complete_phase("Verify", f"Verified {len(_verified)} and flagged {len(_flagged)}.")

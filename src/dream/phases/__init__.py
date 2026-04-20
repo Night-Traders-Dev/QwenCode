@@ -232,7 +232,7 @@ async def phase_verify(
     memory: DreamMemory,
     small: SmallAgent,
     cfg: DreamConfig,
-    medium: MediumAgent | None = None,
+    medium: MediumAgent | None = None,  # kept in signature for API compatibility, not used
 ) -> tuple[list[str], list[str]]:
     logger.info("[verify] checking %d statements", len(raw_statements))
     t0 = time.perf_counter()
@@ -246,14 +246,7 @@ async def phase_verify(
             unique.append(s.strip())
 
     evidence = memory.evidence_block(cfg.research_max_context_chars) if cfg.research_enabled else ""
-    coarse_results = await small.verify_statements(unique, topic, evidence=evidence)
-    coarse_pass = [r["statement"] for r in coarse_results if not r["flag"] and r["score"] >= 0.4]
-
-    if medium is not None and coarse_pass:
-        results = await medium.verify_statements(coarse_pass, topic, evidence=evidence)
-    else:
-        coarse_pass_set = set(coarse_pass)
-        results = [r for r in coarse_results if r["statement"] in coarse_pass_set]
+    results = await small.verify_statements(unique, topic, evidence=evidence)
 
     verified: list[str] = []
     flagged: list[str] = []
@@ -262,11 +255,6 @@ async def phase_verify(
         if not r["flag"] and r["score"] >= cfg.min_verify_confidence:
             verified.append(r["statement"])
         else:
-            flagged.append(r["statement"])
-
-    coarse_pass_set = set(coarse_pass)
-    for r in coarse_results:
-        if r["statement"] not in coarse_pass_set:
             flagged.append(r["statement"])
 
     n_added = memory.add_verified_statements(verified)

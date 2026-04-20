@@ -1,52 +1,40 @@
 """
 dream/memory/dream_memory.py — Persistent knowledge store for the Dream loop.
-
-Persists to JSON so sessions can be resumed.  The in-memory structure is:
-
-{
-  "topic": str,
-  "subtopics": [str, ...],
-  "knowledge_base": [str, ...],         # verified statements accumulated
-  "current_research": {
-    "query": str,
-    "focus_terms": [str, ...],
-    "sources": [{"title": str, "url": str, "domain": str, "snippet": str}, ...],
-    "candidate_statements": [str, ...],
-    "timestamp": float,
-  },
-  "research_history": [current_research, ...],
-  "reinforcement": {
-    "concept_mastery": {str: float, ...},
-    "source_rewards": {str: float, ...},
-    "history": [{"reward": float, "score_delta": float, ...}, ...],
-  },
-  "flagged_statements": [str, ...],     # rejected by verifier
-  "cycle_history": [
-    {
-      "cycle": int,
-      "timestamp": float,
-      "score": float,
-      "passed": bool,
-      "concept_gaps": [str],
-      "weak_areas": [str],
-      "n_statements_added": int,
-    },
-    ...
-  ],
-  "weak_areas": [str, ...],             # current focus areas
-  "topic_retry_count": int,
-  "session_best_score": float,
-}
 """
 
 import json
 import logging
-import os
+import math
+import re
 import time
+from collections import Counter
 from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger("dream.memory")
+
+
+def _summarize_and_trim(history: list[dict[str, Any]], keep: int = 80) -> None:
+    if len(history) <= keep:
+        return
+
+    trim_count = len(history) - keep + 1
+    chunk = history[:trim_count]
+    scores = [
+        float(item.get("score", 0.0))
+        for item in chunk
+        if isinstance(item, dict)
+    ]
+    summary = {
+        "summary": True,
+        "timestamp": time.time(),
+        "count": len(chunk),
+        "avg_score": round(sum(scores) / len(scores), 4) if scores else 0.0,
+        "min_score": round(min(scores), 4) if scores else 0.0,
+        "max_score": round(max(scores), 4) if scores else 0.0,
+    }
+    del history[:trim_count]
+    history.insert(0, summary)
 
 
 class DreamMemory:
@@ -62,10 +50,6 @@ class DreamMemory:
     # ── Persistence ────────────────────────────────────────────────────────
 
     def load_or_init(self, topic: str, subtopics: list[str], resume: bool = False) -> bool:
-        """
-        Load existing memory for `topic` if present, otherwise initialise fresh.
-        Returns True if prior state was loaded (session resume).
-        """
         if resume and self._path.exists():
             try:
                 with self._path.open() as f:
@@ -105,10 +89,7 @@ class DreamMemory:
             "topic_retry_count": 0,
             "session_best_score": 0.0,
         }
-        if self._path.exists() and not resume:
-            logger.info("[memory] starting fresh; existing file will be replaced on save: %s", self._path)
-        else:
-            logger.info("[memory] initialised fresh for topic: %s", topic)
+        logger.info("[memory] initialised fresh for topic: %s", topic)
         return False
 
     def _normalize_shape(self) -> None:
@@ -143,6 +124,16 @@ class DreamMemory:
             reinforcement.setdefault("source_rewards", {})
             reinforcement.setdefault("history", [])
 
+        kb = self._data.get("knowledge_base", [])
+        if kb and isinstance(kb[0], str):
+            self._data["knowledge_base"] = [
+                {"statement": s, "cycle": 0} for s in kb
+            ]
+
+        for entry in self._data.get("cycle_history", []):
+            if isinstance(entry, dict):
+                entry.setdefault("concept_mastery_snapshot", {})
+
     def save(self) -> None:
         try:
             tmp = self._path.with_suffix(".tmp")
@@ -155,13 +146,16 @@ class DreamMemory:
 
     # ── Knowledge base ─────────────────────────────────────────────────────
 
-    def add_verified_statements(self, statements: list[str]) -> int:
-        """Add statements, dedup against existing. Returns count added."""
-        existing = set(self._data.setdefault("knowledge_base", []))
+    def add_verified_statements(self, statements: list[str], cycle: int = 0) -> int:
+        existing = {
+            item["statement"]
+            for item in self._data.setdefault("knowledge_base", [])
+            if isinstance(item, dict) and "statement" in item
+        }
         added = 0
         for s in statements:
             if s not in existing:
-                self._data["knowledge_base"].append(s)
+                self._data["knowledge_base"].append({"statement": s, "cycle": cycle})
                 existing.add(s)
                 added += 1
         return added
@@ -171,7 +165,18 @@ class DreamMemory:
 
     @property
     def knowledge_base(self) -> list[str]:
-        return self._data.get("knowledge_base", [])
+        return [
+            item["statement"]
+            for item in self._data.get("knowledge_base", [])
+            if isinstance(item, dict) and "statement" in item
+        ]
+
+    @property
+    def _knowledge_entries(self) -> list[dict[str, Any]]:
+        return [
+            item for item in self._data.get("knowledge_base", [])
+            if isinstance(item, dict) and "statement" in item
+        ]
 
     # ── Internet research ─────────────────────────────────────────────────
 
@@ -192,8 +197,8 @@ class DreamMemory:
         self._data["current_research"] = payload
         history = self._data.setdefault("research_history", [])
         history.append(payload)
-        if len(history) > 12:
-            del history[:-12]
+        if len(history) > 100:
+            _summarize_and_trim(history, keep=80)
 
     @property
     def current_research(self) -> dict[str, Any]:
@@ -334,12 +339,11 @@ class DreamMemory:
             active_terms = [str(item).strip() for item in (focus_terms or []) if str(item).strip()]
 
         for area in active_terms:
-            cleaned = str(area).strip()
-            if not cleaned:
+            if not area:
                 continue
-            prior = float(concept_mastery.get(cleaned, 0.0) or 0.0)
+            prior = float(concept_mastery.get(area, 0.0) or 0.0)
             delta = 0.18 if passed else (-0.12 if score_delta < 0 else -0.04)
-            concept_mastery[cleaned] = round(max(-2.0, min(2.0, prior + delta)), 4)
+            concept_mastery[area] = round(max(-2.0, min(2.0, prior + delta)), 4)
 
         for gap in concept_gaps:
             cleaned = str(gap).strip()
@@ -368,8 +372,8 @@ class DreamMemory:
                 "concept_gaps": [str(item).strip() for item in concept_gaps if str(item).strip()],
             }
         )
-        if len(history) > 24:
-            del history[:-24]
+        if len(history) > 100:
+            _summarize_and_trim(history, keep=80)
 
     # ── Curriculum state ───────────────────────────────────────────────────
 
@@ -415,6 +419,7 @@ class DreamMemory:
             "concept_gaps": concept_gaps,
             "weak_areas": weak_areas,
             "n_statements_added": n_statements_added,
+            "concept_mastery_snapshot": dict(self.concept_mastery),
         }
         self._data.setdefault("cycle_history", []).append(entry)
 
@@ -432,17 +437,15 @@ class DreamMemory:
     def recent_scores(self, n: int = 5) -> list[float]:
         return [e["score"] for e in self.cycle_history[-n:]]
 
-    def is_converged(self, window: int = 3, threshold: float = 0.02) -> bool:
-        """
-        Returns True if the last `window` scores are all above passing
-        and their range is < `threshold` (i.e. the model has plateaued).
-        """
+    def is_converged(self, window: int = 3, threshold: float = 0.02, min_kb_size: int = 20) -> bool:
         scores = self.recent_scores(window)
         if len(scores) < window:
             return False
         all_passing = all(s >= 0.70 for s in scores)
         score_range = max(scores) - min(scores)
-        return all_passing and score_range < threshold
+        kb_mature = len(self.knowledge_base) >= min_kb_size
+        no_weak_areas = len(self.weak_areas) == 0
+        return all_passing and score_range < threshold and kb_mature and no_weak_areas
 
     # ── Diagnostics ────────────────────────────────────────────────────────
 
@@ -465,90 +468,140 @@ class DreamMemory:
     # ── Dream Replay & Distillation ────────────────────────────────────────
 
     def get_high_confidence_statements(self, min_cycle_score: float = 0.85, limit: int = 50) -> list[str]:
-        """
-        Extract verified statements from cycles with high scores for dream replay.
-        These form the basis for knowledge distillation to smaller models.
-        """
-        high_score_cycles = [
-            cycle for cycle in self.cycle_history
+        high_score_cycles = {
+            cycle["cycle"]
+            for cycle in self.cycle_history
             if cycle.get("score", 0.0) >= min_cycle_score
-        ]
+        }
 
         if not high_score_cycles:
-            return self.knowledge_base[:limit]
+            return self.knowledge_base[-limit:] if self.knowledge_base else []
 
-        # Return most recent high-confidence statements
-        return self.knowledge_base[-limit:] if self.knowledge_base else []
+        matched = [
+            item["statement"]
+            for item in self._knowledge_entries
+            if int(item.get("cycle", 0)) in high_score_cycles
+        ]
+        return matched[-limit:]
 
     def generate_distillation_dataset(self, output_path: str = "distillation_data.json") -> int:
-        """
-        Create a fine-tuning dataset from verified knowledge and high-scoring cycles.
-        Returns the number of samples generated.
-        """
-        import json
-
         samples = []
         high_conf_statements = self.get_high_confidence_statements()
 
         for statement in high_conf_statements:
+            concepts = self._extract_key_concepts(statement)
             sample = {
-                "instruction": "Verify and explain this statement:",
+                "instruction": "Explain the following verified fact clearly and completely:",
                 "input": statement,
-                "output": f"This statement is verified and accurate. Key concepts: {self._extract_key_concepts(statement)}",
+                "output": f"{statement}\n\nKey concepts: {concepts}",
                 "metadata": {
                     "source": "dream_memory",
                     "topic": self._data.get("topic", ""),
-                    "confidence": "high"
-                }
+                    "confidence": "high",
+                },
             }
             samples.append(sample)
 
         try:
             with open(output_path, "w") as f:
                 json.dump(samples, f, indent=2)
-            logger.info(f"[memory] generated {len(samples)} distillation samples to {output_path}")
+            logger.info("[memory] generated %d distillation samples to %s", len(samples), output_path)
             return len(samples)
         except OSError as exc:
-            logger.error(f"[memory] failed to write distillation dataset: {exc}")
+            logger.error("[memory] failed to write distillation dataset: %s", exc)
             return 0
 
     def _extract_key_concepts(self, statement: str) -> str:
-        """Extract key concepts from a statement for distillation."""
-        # Simple extraction: first 10 words or until punctuation
-        words = statement.split()
-        concepts = []
-        for word in words[:10]:
-            clean = word.strip(".,;:!?\"'()[]{}").lower()
-            if len(clean) > 3 and clean not in {"the", "and", "that", "this", "with", "from", "have", "been", "are", "was"}:
-                concepts.append(clean)
-        return ", ".join(concepts[:5])
+        stopwords = {
+            "the", "and", "that", "this", "with", "from", "have", "been",
+            "are", "was", "for", "not", "but", "they", "will", "its",
+            "has", "can", "all", "an", "a", "in", "of", "to", "is",
+            "it", "be", "as", "at", "by", "we", "or", "on", "so",
+        }
+
+        def tokenize(text: str) -> list[str]:
+            return [
+                w.lower()
+                for w in re.findall(r"[a-zA-Z]+", text)
+                if len(w) > 3 and w.lower() not in stopwords
+            ]
+
+        target_terms = tokenize(statement)
+        if not target_terms:
+            return ""
+
+        kb = self.knowledge_base
+        if len(kb) < 5:
+            counts = Counter(target_terms)
+            return ", ".join(t for t, _ in counts.most_common(5))
+
+        doc_freq: Counter[str] = Counter()
+        for doc in kb:
+            for term in set(tokenize(doc)):
+                doc_freq[term] += 1
+
+        n_docs = len(kb)
+        tfidf: dict[str, float] = {}
+        term_counts = Counter(target_terms)
+        for term, tf in term_counts.items():
+            df = doc_freq.get(term, 0)
+            idf = math.log((n_docs + 1) / (df + 1)) + 1.0
+            tfidf[term] = tf * idf
+
+        top = sorted(tfidf.items(), key=lambda x: x[1], reverse=True)[:5]
+        return ", ".join(t for t, _ in top)
 
     def cross_topic_search(self, query: str, limit: int = 10) -> list[dict[str, Any]]:
-        """
-        Search across knowledge base for connections to other topics.
-        Returns matching statements with relevance scores.
-        """
-        results = []
-        query_terms = set(query.lower().split())
+        stopwords = {"the", "and", "that", "this", "with", "from", "have", "been", "are", "a", "an", "in", "of"}
 
-        for stmt in self.knowledge_base:
-            stmt_lower = stmt.lower()
-            overlap = len(query_terms & set(stmt_lower.split()))
-            if overlap > 0:
+        def tokenize(text: str) -> list[str]:
+            return [w.lower() for w in re.findall(r"[a-zA-Z]+", text) if w.lower() not in stopwords]
+
+        kb = self.knowledge_base
+        if not kb:
+            return []
+
+        query_terms = tokenize(query)
+        if not query_terms:
+            return []
+
+        doc_freq: Counter[str] = Counter()
+        tokenized_docs = [tokenize(stmt) for stmt in kb]
+        for tokens in tokenized_docs:
+            for term in set(tokens):
+                doc_freq[term] += 1
+
+        n_docs = len(kb)
+        avg_dl = sum(len(t) for t in tokenized_docs) / max(1, n_docs)
+        k1 = 1.5
+        b = 0.75
+
+        results = []
+        for stmt, tokens in zip(kb, tokenized_docs):
+            tf_map = Counter(tokens)
+            dl = len(tokens)
+            score = 0.0
+            for term in query_terms:
+                if term not in tf_map:
+                    continue
+                df = doc_freq.get(term, 0)
+                idf = math.log((n_docs - df + 0.5) / (df + 0.5) + 1.0)
+                tf = tf_map[term]
+                numerator = tf * (k1 + 1)
+                denominator = tf + k1 * (1 - b + b * dl / max(avg_dl, 1.0))
+                score += idf * numerator / denominator
+
+            if score > 0:
                 results.append({
                     "statement": stmt,
-                    "relevance_score": overlap / len(query_terms),
-                    "topic": self._data.get("topic", "")
+                    "relevance_score": round(score, 4),
+                    "topic": self._data.get("topic", ""),
                 })
 
         results.sort(key=lambda x: x["relevance_score"], reverse=True)
         return results[:limit]
 
     def create_concept_map(self) -> dict[str, list[str]]:
-        """
-        Build a concept map showing relationships between learned concepts.
-        Groups statements by shared key terms.
-        """
         concept_groups: dict[str, list[str]] = {}
 
         for statement in self.knowledge_base:
@@ -557,5 +610,4 @@ class DreamMemory:
                 if concept:
                     concept_groups.setdefault(concept, []).append(statement)
 
-        # Filter to concepts with multiple statements
         return {k: v for k, v in concept_groups.items() if len(v) >= 2}

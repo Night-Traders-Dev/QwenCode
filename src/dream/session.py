@@ -1,13 +1,5 @@
 """
 dream/session.py — DreamSession: the top-level orchestration loop.
-
-Usage:
-    from dream.session import DreamSession
-    from dream.config import DreamConfig
-
-    cfg = DreamConfig(target_duration_hours=4.0)
-    session = DreamSession(topic="Transformer neural architectures", config=cfg)
-    asyncio.run(session.run())
 """
 
 import asyncio
@@ -54,19 +46,6 @@ def _configure_logging(log_path: str, stream: bool = True) -> None:
 
 
 class DreamSession:
-    """
-    Orchestrates the Dream training loop for a given topic.
-
-    Cycle structure:
-      Gather → Verify → Examine → Adapt → [checkpoint] → repeat
-
-    Termination conditions (any of):
-      - target duration reached
-      - topic converged (consistently passing)
-      - retry limit exceeded
-      - keyboard interrupt / SIGTERM
-    """
-
     def __init__(
         self,
         topic: str,
@@ -90,12 +69,9 @@ class DreamSession:
             except Exception as exc:
                 logger.warning("[session] memory store unavailable for Dream sync: %s", exc)
 
-    # ── Entry point ────────────────────────────────────────────────────────
-
     async def run(self) -> None:
         _configure_logging(self.cfg.log_path, stream=not self.cfg.live_ui)
 
-        # Graceful shutdown on SIGTERM
         loop = asyncio.get_running_loop()
         loop.add_signal_handler(signal.SIGTERM, self._request_stop)
         session_start = time.time()
@@ -113,8 +89,10 @@ class DreamSession:
             logger.info("DREAM SESSION START")
             logger.info("Topic    : %s", self.topic)
             logger.info("Duration : %.1f hours", self.cfg.target_duration_hours)
-            logger.info("Models   : cloud=%s | medium=%s | small=%s",
-                        self.cfg.cloud.name, self.cfg.medium.name, self.cfg.small.name)
+            logger.info(
+                "Models   : cloud=%s | medium=%s | small=%s",
+                self.cfg.cloud.name, self.cfg.medium.name, self.cfg.small.name
+            )
             logger.info("=" * 60)
 
             deadline = time.time() + self.cfg.target_duration_hours * 3600
@@ -124,7 +102,6 @@ class DreamSession:
                 MediumAgent(self.cfg.medium) as medium,
                 SmallAgent(self.cfg.small) as small,
             ):
-                # Initialise or resume memory
                 resumed = self.memory.load_or_init(
                     self.topic,
                     [],
@@ -144,9 +121,8 @@ class DreamSession:
                 self._ui_set_subtopics(self.memory.subtopics)
                 self._ui_update_memory()
 
-                self._persist_session_overview()
+                await asyncio.to_thread(self._persist_session_overview_sync)
 
-                # Main cycle loop
                 while not self._stop_flag and time.time() < deadline:
                     self._cycle += 1
                     remaining = (deadline - time.time()) / 3600
@@ -173,19 +149,16 @@ class DreamSession:
                         await asyncio.sleep(10)
                         continue
 
-                    # Checkpoint
                     if self._cycle % self.cfg.checkpoint_every_n_cycles == 0:
                         self.memory.save()
-                        self._persist_session_overview()
+                        await asyncio.to_thread(self._persist_session_overview_sync)
                         logger.info("[session] checkpoint saved — cycle %d", self._cycle)
                         self._ui_add_event(f"Checkpoint saved at cycle {self._cycle}.", C["brand"])
 
-                        # Run dream replay every 3rd checkpoint for knowledge consolidation
                         if (self._cycle // self.cfg.checkpoint_every_n_cycles) % 3 == 0:
                             replay_path = f"dream_replay_cycle{self._cycle}.json"
                             await self.run_dream_replay(replay_path)
 
-                    # Convergence check
                     if self.memory.is_converged():
                         logger.info(
                             "[session] CONVERGED after %d cycles — best score=%.1f%%",
@@ -194,7 +167,6 @@ class DreamSession:
                         self._ui_add_event("Convergence reached.", C["ok"])
                         break
 
-                    # Retry limit check
                     if self.memory.topic_retry_count >= self.cfg.max_topic_retries:
                         logger.info(
                             "[session] retry limit reached (%d) — ending session",
@@ -203,7 +175,6 @@ class DreamSession:
                         self._ui_add_event("Retry limit reached.", C["warn"])
                         break
 
-            # Final save and summary
             self.memory.save()
             elapsed = (time.time() - session_start) / 3600
             summary = self.memory.summary()
@@ -216,7 +187,7 @@ class DreamSession:
             logger.info("Recent scores  : %s", [f"{s:.1%}" for s in summary["recent_scores"]])
             logger.info("Converged      : %s", summary["converged"])
             logger.info("=" * 60)
-            self._persist_session_overview()
+            await asyncio.to_thread(self._persist_session_overview_sync)
             if self.ui:
                 self.ui.finish(summary, elapsed)
         except Exception as exc:
@@ -230,8 +201,6 @@ class DreamSession:
             if self.memory_store is not None:
                 self.memory_store.close()
 
-    # ── Single cycle ───────────────────────────────────────────────────────
-
     async def _run_cycle(
         self,
         cloud: CloudAgent,
@@ -243,7 +212,6 @@ class DreamSession:
         memory = self.memory
         cfg = self.cfg
 
-        # ── Phase 1: Gather ────────────────────────────────────────────────
         self._ui_set_phase("Gather", "running", "Collecting candidate statements")
         raw_statements = await phase_gather(
             topic,
@@ -254,18 +222,17 @@ class DreamSession:
             cfg,
             memory_store=self.memory_store,
         )
-        self._persist_research_sources()
+        await self._persist_research_sources()
         self._ui_complete_phase("Gather", f"Collected {len(raw_statements)} candidate statements.")
 
-        # ── Phase 2: Verify ────────────────────────────────────────────────
         await asyncio.sleep(cfg.local_inference_cooldown)
         self._ui_set_phase("Verify", "running", f"Fact-checking {len(raw_statements)} statements")
-        _verified, _flagged = await phase_verify(topic, raw_statements, memory, small, cfg)
-        self._persist_verified_statements(_verified)
+        _verified, _flagged = await phase_verify(topic, raw_statements, memory, small, cfg, medium=medium)
+        memory.add_verified_statements([], cycle=cycle)
+        await self._persist_verified_statements(_verified)
         self._ui_complete_phase("Verify", f"Verified {len(_verified)} and flagged {len(_flagged)}.")
         self._ui_update_memory()
 
-        # ── Phase 3: Examine ───────────────────────────────────────────────
         await asyncio.sleep(cfg.local_inference_cooldown)
         self._ui_set_phase("Examine", "running", f"Testing {len(memory.knowledge_base)} verified facts")
         grade_report = await phase_examine(topic, cycle, memory, cloud, medium, small, cfg)
@@ -274,7 +241,6 @@ class DreamSession:
             f"Scored {grade_report.get('score', 0.0) * 100:.1f}% on {grade_report.get('total', 0)} questions.",
         )
 
-        # ── Record cycle results ───────────────────────────────────────────
         memory.record_cycle(
             cycle=cycle,
             score=grade_report.get("score", 0.0),
@@ -284,7 +250,6 @@ class DreamSession:
             n_statements_added=len(_verified),
         )
 
-        # ── Phase 4: Adapt ─────────────────────────────────────────────────
         self._ui_set_phase("Adapt", "running", "Updating curriculum and weak areas")
         await phase_adapt(topic, cycle, grade_report, memory, cloud, cfg)
         memory.reinforce_cycle(
@@ -296,7 +261,7 @@ class DreamSession:
             sources=memory.research_sources,
             focus_terms=self.memory.current_research.get("focus_terms", []),
         )
-        self._persist_cycle_report(cycle, grade_report)
+        await self._persist_cycle_report(cycle, grade_report)
         adapt_detail = (
             f"Passed cycle. Retry count {memory.topic_retry_count}/{cfg.max_topic_retries}."
             if grade_report.get("passed")
@@ -305,7 +270,6 @@ class DreamSession:
         self._ui_complete_phase("Adapt", adapt_detail)
         self._ui_update_memory(grade_report)
 
-        # ── Cycle summary ──────────────────────────────────────────────────
         scores = memory.recent_scores(3)
         trend = "↑" if len(scores) >= 2 and scores[-1] > scores[-2] else \
                 "↓" if len(scores) >= 2 and scores[-1] < scores[-2] else "→"
@@ -394,9 +358,9 @@ class DreamSession:
         return text or exc.__class__.__name__
 
     def _topic_digest(self) -> str:
-        return hashlib.sha1(self.topic.encode("utf-8")).hexdigest()[:16]
+        return hashlib.sha256(self.topic.encode("utf-8")).hexdigest()[:16]
 
-    def _persist_session_overview(self) -> None:
+    def _persist_session_overview_sync(self) -> None:
         if self.memory_store is None:
             return
 
@@ -430,59 +394,70 @@ class DreamSession:
             metadata={"topic": self.topic, "kind": "dream_summary"},
         )
 
-    def _persist_verified_statements(self, statements: list[str]) -> None:
+    async def _persist_verified_statements(self, statements: list[str]) -> None:
         if self.memory_store is None or not statements:
             return
 
         session_id = self.cfg.session_id
         topic_digest = self._topic_digest()
-        for statement in statements:
-            statement_digest = hashlib.sha1(statement.encode("utf-8")).hexdigest()[:16]
-            self.memory_store.upsert_knowledge(
-                key=f"dream:knowledge:{session_id}:{topic_digest}:{statement_digest}",
-                content=statement,
-                source="dream",
-                category="dream_knowledge",
-                session_id=session_id,
-                metadata={"topic": self.topic, "kind": "verified_statement"},
-            )
 
-    def _persist_research_sources(self) -> None:
+        def _sync() -> None:
+            for statement in statements:
+                statement_digest = hashlib.sha256(statement.encode("utf-8")).hexdigest()[:16]
+                self.memory_store.upsert_knowledge(
+                    key=f"dream:knowledge:{session_id}:{topic_digest}:{statement_digest}",
+                    content=statement,
+                    source="dream",
+                    category="dream_knowledge",
+                    session_id=session_id,
+                    metadata={"topic": self.topic, "kind": "verified_statement"},
+                )
+
+        await asyncio.to_thread(_sync)
+
+    async def _persist_research_sources(self) -> None:
         if self.memory_store is None or not self.memory.research_sources:
             return
 
         session_id = self.cfg.session_id
         topic_digest = self._topic_digest()
         query = self.memory.research_query
-        for source in self.memory.research_sources:
-            url = str(source.get("url", "")).strip()
-            if not url:
-                continue
-            source_digest = hashlib.sha1(url.encode("utf-8")).hexdigest()[:16]
-            payload = {
-                "topic": self.topic,
-                "query": query,
-                "title": source.get("title", ""),
-                "url": url,
-                "domain": source.get("domain", ""),
-                "snippet": source.get("snippet", ""),
-            }
-            self.memory_store.upsert_knowledge(
-                key=f"dream:source:{session_id}:{topic_digest}:{source_digest}",
-                content=json.dumps(payload, indent=2),
-                source=str(source.get("domain", "dream_research") or "dream_research"),
-                category="dream_source",
-                session_id=session_id,
-                metadata={
+        sources = list(self.memory.research_sources)
+
+        def _sync() -> None:
+            for source in sources:
+                url = str(source.get("url", "")).strip()
+                if not url:
+                    continue
+                source_digest = hashlib.sha256(url.encode("utf-8")).hexdigest()[:16]
+                payload = {
                     "topic": self.topic,
-                    "kind": "research_source",
                     "query": query,
+                    "title": source.get("title", ""),
                     "url": url,
                     "domain": source.get("domain", ""),
-                },
-            )
+                    "snippet": source.get("snippet", ""),
+                    "session_id": session_id,
+                }
+                self.memory_store.upsert_knowledge(
+                    key=f"dream:source:{session_id}:{topic_digest}:{source_digest}",
+                    content=json.dumps(payload, indent=2),
+                    source=str(source.get("domain", "dream_research") or "dream_research"),
+                    category="dream_source",
+                    session_id=session_id,
+                    metadata={
+                        "topic": self.topic,
+                        "kind": "research_source",
+                        "query": query,
+                        "url": url,
+                        "domain": source.get("domain", ""),
+                        "session_id": session_id,
+                    },
+                )
 
-    def _persist_cycle_report(self, cycle: int, grade_report: dict) -> None:
+        await asyncio.to_thread(_sync)
+
+    async def _persist_cycle_report(self, cycle: int, grade_report: dict) -> None:
         if self.memory_store is None:
             return
 
@@ -499,13 +474,15 @@ class DreamSession:
             "research_domains": self.memory.research_domains,
             "reinforcement_focus": self.memory.reinforcement_focus(3),
         }
-        self.memory_store.upsert_knowledge(
-            key=f"dream:cycle:{session_id}:{self._topic_digest()}:{cycle:06d}",
-            content=json.dumps(payload, indent=2),
-            source="dream",
-            category="dream_cycle",
-            session_id=session_id,
-            metadata={"topic": self.topic, "cycle": cycle, "kind": "cycle_report"},
+
+        await asyncio.to_thread(
+            self.memory_store.upsert_knowledge,
+            f"dream:cycle:{session_id}:{self._topic_digest()}:{cycle:06d}",
+            json.dumps(payload, indent=2),
+            "dream",
+            "dream_cycle",
+            session_id,
+            {"topic": self.topic, "cycle": cycle, "kind": "cycle_report"},
         )
 
     def _ui_set_subtopics(self, subtopics: list[str]) -> None:
@@ -532,22 +509,11 @@ class DreamSession:
         if self.ui:
             self.ui.add_event(text, color)
 
-    # ── Dream Replay & Memory Enhancement ──────────────────────────────────
-
     async def run_dream_replay(self, output_path: str = "dream_replay_output.json") -> dict:
-        """
-        Run a dream replay session to consolidate knowledge and generate distillation data.
-        Best called after a successful session or during checkpoint intervals.
-        """
         logger.info("[session] starting dream replay for knowledge consolidation...")
 
-        # Generate distillation dataset
         n_samples = self.memory.generate_distillation_dataset(output_path)
-
-        # Create concept map
         concept_map = self.memory.create_concept_map()
-
-        # Get high-confidence statements for review
         high_conf = self.memory.get_high_confidence_statements(limit=100)
 
         result = {
@@ -569,28 +535,21 @@ class DreamSession:
         return result
 
     def get_cross_topic_insights(self, query: str) -> list[dict]:
-        """
-        Search for connections between current topic and other learned material.
-        Useful for identifying transferable knowledge patterns.
-        """
         return self.memory.cross_topic_search(query, limit=15)
 
     def export_learning_analytics(self, output_path: str = "learning_analytics.json") -> dict:
-        """
-        Export comprehensive learning analytics including:
-        - Concept mastery progression
-        - Source reliability scores
-        - Weak area evolution
-        - Score trends
-        """
         analytics = {
             "topic": self.topic,
             "total_cycles": len(self.memory.cycle_history),
             "final_score": self.memory.session_best_score,
             "knowledge_base_size": len(self.memory.knowledge_base),
             "concept_mastery_progression": [
-                {"cycle": i+1, "mastery": self.memory.reinforcement.get("concept_mastery", {})}
-                for i in range(len(self.memory.cycle_history))
+                {
+                    "cycle": entry["cycle"],
+                    "timestamp": entry.get("timestamp"),
+                    "mastery": entry.get("concept_mastery_snapshot", {}),
+                }
+                for entry in self.memory.cycle_history
             ],
             "score_history": [
                 {"cycle": entry["cycle"], "score": entry["score"], "passed": entry["passed"]}
@@ -610,11 +569,10 @@ class DreamSession:
         }
 
         try:
-            import json
             with open(output_path, "w") as f:
                 json.dump(analytics, f, indent=2)
-            logger.info(f"[session] exported learning analytics to {output_path}")
+            logger.info("[session] exported learning analytics to %s", output_path)
         except OSError as exc:
-            logger.error(f"[session] failed to export analytics: {exc}")
+            logger.error("[session] failed to export analytics: %s", exc)
 
         return analytics

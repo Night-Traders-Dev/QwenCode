@@ -17,11 +17,13 @@ from contextlib import contextmanager
 
 try:
     import psycopg2
+    from psycopg2 import pool as pg_pool
     from psycopg2.extras import RealDictCursor, Json
     PSYCOPG2_AVAILABLE = True
 except ImportError:
     PSYCOPG2_AVAILABLE = False
     psycopg2 = None
+    pg_pool = None
 
 
 class MemoryStore:
@@ -33,17 +35,11 @@ class MemoryStore:
         backend: str = "auto",
         require_postgres: bool = False,
     ):
-        """
-        Initialize the memory store.
-
-        Args:
-            db_url: PostgreSQL connection URL. If None, uses file-based fallback.
-                   Format: postgresql://user:pass@host:port/dbname
-        """
         self.db_url = db_url
         self.backend = (backend or "auto").lower()
         self.require_postgres = require_postgres
         self._conn = None
+        self._pool = None
         self._fallback_reason = ""
 
         if self.backend not in {"auto", "postgresql", "file"}:
@@ -68,6 +64,11 @@ class MemoryStore:
 
         if not self._use_file_fallback:
             self.backend = "postgresql"
+            self._pool = pg_pool.ThreadedConnectionPool(
+                minconn=1,
+                maxconn=8,
+                dsn=self.db_url,
+            )
             self._init_db()
         else:
             self.backend = "file"
@@ -75,9 +76,7 @@ class MemoryStore:
             self._data_dir.mkdir(parents=True, exist_ok=True)
 
     def _init_db(self):
-        """Initialize database tables."""
         with self._get_cursor() as cur:
-            # Conversations table
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS conversations (
                     id SERIAL PRIMARY KEY,
@@ -98,7 +97,6 @@ class MemoryStore:
                 ) STORED
             """)
 
-            # Sessions table
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS sessions (
                     id SERIAL PRIMARY KEY,
@@ -111,7 +109,6 @@ class MemoryStore:
                 )
             """)
 
-            # Tool executions table
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS tool_executions (
                     id SERIAL PRIMARY KEY,
@@ -124,7 +121,6 @@ class MemoryStore:
                 )
             """)
 
-            # User memories/preferences table
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS user_memories (
                     id SERIAL PRIMARY KEY,
@@ -136,7 +132,6 @@ class MemoryStore:
                 )
             """)
 
-            # Searchable knowledge table for durable memory/retrieval
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS knowledge_entries (
                     id SERIAL PRIMARY KEY,
@@ -156,7 +151,6 @@ class MemoryStore:
                 )
             """)
 
-            # Create indexes
             cur.execute("""
                 CREATE INDEX IF NOT EXISTS idx_conversations_session_timestamp
                 ON conversations(session_id, timestamp DESC)
@@ -200,32 +194,24 @@ class MemoryStore:
 
     @contextmanager
     def _get_cursor(self):
-        """Get a database cursor context manager."""
         if self._use_file_fallback:
             raise RuntimeError("Database not available, using file fallback")
 
-        if self._conn is None or self._conn.closed:
-            self._conn = psycopg2.connect(
-                self.db_url,
-                cursor_factory=RealDictCursor
-            )
-
+        conn = self._pool.getconn()
         try:
-            cur = self._conn.cursor()
+            cur = conn.cursor(cursor_factory=RealDictCursor)
             yield cur
-            self._conn.commit()
-        except Exception as e:
-            if self._conn:
-                self._conn.rollback()
-            raise e
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
         finally:
-            if cur:
-                cur.close()
+            cur.close()
+            self._pool.putconn(conn)
 
     def get_or_create_session(self, session_id: str,
                                model_main: str = None,
                                model_local: str = None) -> Dict[str, Any]:
-        """Get existing session or create new one."""
         if self._use_file_fallback:
             return self._file_get_or_create_session(session_id, model_main, model_local)
 
@@ -264,7 +250,6 @@ class MemoryStore:
             """, (session_id,))
 
     def get_status(self) -> Dict[str, Any]:
-        """Return backend/health details for the active memory store."""
         return {
             "backend": self.backend,
             "postgres_enabled": not self._use_file_fallback,
@@ -282,7 +267,6 @@ class MemoryStore:
         metadata: Dict = None,
         tokens_used: Optional[int] = None,
     ) -> int:
-        """Add a message to conversation history."""
         metadata = dict(metadata or {})
         if tokens_used is not None:
             metadata["tokens_used"] = tokens_used
@@ -301,26 +285,23 @@ class MemoryStore:
         return message_id
 
     def get_conversation(self, session_id: str, limit: int = 100) -> List[Dict]:
-        """Get conversation history for a session."""
         if self._use_file_fallback:
             return self._file_get_conversation(session_id, limit)
 
         with self._get_cursor() as cur:
             cur.execute("""
                 SELECT role, content, model, timestamp, metadata
-                FROM (
-                    SELECT role, content, model, timestamp, metadata
-                    FROM conversations
-                    WHERE session_id = %s
-                    ORDER BY timestamp DESC
-                    LIMIT %s
-                ) recent
+                FROM conversations
+                WHERE session_id = %s
                 ORDER BY timestamp ASC
-            """, (session_id, limit))
+                LIMIT %s OFFSET GREATEST(
+                    0,
+                    (SELECT COUNT(*) FROM conversations WHERE session_id = %s) - %s
+                )
+            """, (session_id, limit, session_id, limit))
             return [dict(row) for row in cur.fetchall()]
 
     def clear_conversation(self, session_id: str) -> bool:
-        """Clear conversation history for a session."""
         if self._use_file_fallback:
             return self._file_clear_conversation(session_id)
 
@@ -334,7 +315,6 @@ class MemoryStore:
 
     def log_tool_execution(self, session_id: str, tool_name: str,
                            arguments: Dict, result: str, success: bool = True) -> int:
-        """Log a tool execution."""
         if self._use_file_fallback:
             return self._file_log_tool_execution(session_id, tool_name, arguments, result, success)
 
@@ -349,7 +329,6 @@ class MemoryStore:
         return execution_id
 
     def get_tool_history(self, session_id: str, limit: int = 50) -> List[Dict]:
-        """Get tool execution history."""
         if self._use_file_fallback:
             return self._file_get_tool_history(session_id, limit)
 
@@ -364,7 +343,6 @@ class MemoryStore:
             return [dict(row) for row in cur.fetchall()]
 
     def set_memory(self, key: str, value: Any, category: str = 'general') -> bool:
-        """Store a user memory/preference."""
         if self._use_file_fallback:
             return self._file_set_memory(key, value, category)
 
@@ -379,7 +357,6 @@ class MemoryStore:
             return cur.fetchone() is not None
 
     def get_memory(self, key: str) -> Optional[Any]:
-        """Retrieve a user memory/preference."""
         if self._use_file_fallback:
             return self._file_get_memory(key)
 
@@ -391,7 +368,6 @@ class MemoryStore:
             return row['value'] if row else None
 
     def get_all_memories(self, category: str = None) -> Dict[str, Any]:
-        """Get all user memories, optionally filtered by category."""
         if self._use_file_fallback:
             return self._file_get_all_memories(category)
 
@@ -415,7 +391,6 @@ class MemoryStore:
         session_id: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
     ) -> int:
-        """Store durable searchable knowledge."""
         if self._use_file_fallback:
             return self._file_upsert_knowledge(key, content, source, category, session_id, metadata)
 
@@ -444,7 +419,6 @@ class MemoryStore:
         category: Optional[str] = None,
         session_id: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
-        """Search knowledge entries by full text in PostgreSQL or substring fallback."""
         if self._use_file_fallback:
             return self._file_search_knowledge(query, limit, category, session_id)
 
@@ -484,7 +458,6 @@ class MemoryStore:
         session_id: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
     ) -> List[Dict[str, Any]]:
-        """List recent knowledge rows, optionally filtered by category/session/metadata."""
         if self._use_file_fallback:
             return self._file_list_knowledge(limit, category, session_id, metadata)
 
@@ -517,7 +490,6 @@ class MemoryStore:
             return [dict(row) for row in cur.fetchall()]
 
     def count_knowledge_entries(self, category: Optional[str] = None) -> int:
-        """Count stored knowledge rows."""
         if self._use_file_fallback:
             return self._file_count_knowledge_entries(category)
 
@@ -536,15 +508,16 @@ class MemoryStore:
             return int(cur.fetchone()["count"])
 
     def close(self):
-        """Close database connection."""
+        if self._pool is not None:
+            self._pool.closeall()
+            self._pool = None
         if self._conn and not self._conn.closed:
             self._conn.close()
             self._conn = None
 
-    # ── File-based fallback methods ───────────────────────────────────────────
+    # ── File-based fallback methods ───────────────────────────────────────
 
     def _file_get_session_path(self, session_id: str) -> Path:
-        """Get path to session file."""
         session_hash = hashlib.md5(session_id.encode()).hexdigest()[:16]
         return self._data_dir / f"session_{session_hash}.json"
 
@@ -567,7 +540,9 @@ class MemoryStore:
             'updated_at': datetime.now().isoformat(),
             'model_main': model_main,
             'model_local': model_local,
-            'metadata': {}
+            'metadata': {},
+            'messages': [],
+            'tool_executions': [],
         }
         path.write_text(json.dumps(data, indent=2))
         return data
@@ -575,10 +550,10 @@ class MemoryStore:
     def _file_add_message(self, session_id: str, role: str, content: str,
                           model: str = None, metadata: Dict = None) -> int:
         path = self._file_get_session_path(session_id)
-        data = json.loads(path.read_text()) if path.exists() else {'messages': []}
+        data = json.loads(path.read_text()) if path.exists() else \
+               self._file_get_or_create_session(session_id)
 
-        if 'messages' not in data:
-            data['messages'] = []
+        data.setdefault('messages', [])
 
         msg = {
             'role': role,
@@ -615,10 +590,10 @@ class MemoryStore:
     def _file_log_tool_execution(self, session_id: str, tool_name: str,
                                   arguments: Dict, result: str, success: bool) -> int:
         path = self._file_get_session_path(session_id)
-        data = json.loads(path.read_text()) if path.exists() else {'tool_executions': []}
+        data = json.loads(path.read_text()) if path.exists() else \
+               self._file_get_or_create_session(session_id)
 
-        if 'tool_executions' not in data:
-            data['tool_executions'] = []
+        data.setdefault('tool_executions', [])
 
         exec_record = {
             'tool_name': tool_name,
@@ -628,6 +603,7 @@ class MemoryStore:
             'timestamp': datetime.now().isoformat()
         }
         data['tool_executions'].append(exec_record)
+        data['updated_at'] = datetime.now().isoformat()
         path.write_text(json.dumps(data, indent=2))
         return len(data['tool_executions'])
 
@@ -713,24 +689,33 @@ class MemoryStore:
         if not path.exists():
             return []
 
-        q = query.lower()
+        def tokenize(text: str) -> set[str]:
+            return set(re.findall(r"[a-zA-Z0-9]+", text.lower()))
+
+        query_tokens = tokenize(query)
         rows = []
         for key, item in json.loads(path.read_text()).items():
             if category and item.get("category") != category:
                 continue
             if session_id and item.get("session_id") != session_id:
                 continue
-            haystack = " ".join([
+
+            haystack_tokens = tokenize(" ".join([
                 key,
                 item.get("content", ""),
                 item.get("source", "") or "",
-            ]).lower()
-            if q in haystack:
+            ]))
+            overlap = len(query_tokens & haystack_tokens)
+            if overlap > 0:
                 rows.append({
                     "key": key,
+                    "_score": overlap,
                     **item,
                 })
-        rows.sort(key=lambda row: row.get("updated_at", ""), reverse=True)
+
+        rows.sort(key=lambda row: (row.get("_score", 0), row.get("updated_at", "")), reverse=True)
+        for row in rows:
+            row.pop("_score", None)
         return rows[:limit]
 
     def _file_list_knowledge(

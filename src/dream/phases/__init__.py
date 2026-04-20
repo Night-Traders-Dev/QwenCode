@@ -1,8 +1,5 @@
 """
 dream/phases/__init__.py — The four Dream phases as composable async functions.
-
-Each phase is a pure async function that takes agents + memory and returns results.
-The session.py orchestrator calls them in sequence each cycle.
 """
 
 import asyncio
@@ -175,8 +172,6 @@ def _merge_research_packets(
     )
 
 
-# ── Phase 1: Gather ────────────────────────────────────────────────────────
-
 async def phase_gather(
     topic: str,
     memory: DreamMemory,
@@ -186,12 +181,6 @@ async def phase_gather(
     cfg: DreamConfig,
     memory_store: Any = None,
 ) -> list[str]:
-    """
-    All three agents generate factual statements about the topic.
-    Returns the combined raw (unverified) list.
-
-    Cloud and medium run concurrently; small waits (VRAM budget on 8GB).
-    """
     logger.info("[gather] starting — topic=%s, subtopics=%s", topic, memory.subtopics[:3])
     t0 = time.perf_counter()
     packet = await _research_packet(topic, memory, cfg)
@@ -215,8 +204,6 @@ async def phase_gather(
             ", ".join(source.domain for source in packet.sources[:4]) or "none",
         )
 
-    # Only parallelize when the cloud lane is truly remote. If it has fallen back
-    # to a local endpoint, keep the local 4B calls serialized to avoid VRAM spikes.
     if _is_local_endpoint(cfg.cloud.base_url):
         cloud_stmts = await cloud.gather(topic, memory.subtopics, evidence=evidence)
         await asyncio.sleep(cfg.local_inference_cooldown)
@@ -226,7 +213,6 @@ async def phase_gather(
         medium_task = asyncio.create_task(medium.gather(topic, memory.subtopics, evidence=evidence))
         cloud_stmts, medium_stmts = await asyncio.gather(cloud_task, medium_task)
 
-    # Small runs after medium to avoid OOM spike on shared 8GB
     await asyncio.sleep(cfg.local_inference_cooldown)
     small_stmts = await small.gather(topic, memory.subtopics, evidence=evidence)
 
@@ -240,24 +226,17 @@ async def phase_gather(
     return combined
 
 
-# ── Phase 2: Verify ────────────────────────────────────────────────────────
-
 async def phase_verify(
     topic: str,
     raw_statements: list[str],
     memory: DreamMemory,
     small: SmallAgent,
     cfg: DreamConfig,
+    medium: MediumAgent | None = None,
 ) -> tuple[list[str], list[str]]:
-    """
-    0.8B model scores each statement.
-    Returns (verified_statements, flagged_statements).
-    Verified statements are added to DreamMemory.
-    """
     logger.info("[verify] checking %d statements", len(raw_statements))
     t0 = time.perf_counter()
 
-    # Deduplicate raw before sending to verifier
     seen: set[str] = set()
     unique: list[str] = []
     for s in raw_statements:
@@ -267,7 +246,14 @@ async def phase_verify(
             unique.append(s.strip())
 
     evidence = memory.evidence_block(cfg.research_max_context_chars) if cfg.research_enabled else ""
-    results = await small.verify_statements(unique, topic, evidence=evidence)
+    coarse_results = await small.verify_statements(unique, topic, evidence=evidence)
+    coarse_pass = [r["statement"] for r in coarse_results if not r["flag"] and r["score"] >= 0.4]
+
+    if medium is not None and coarse_pass:
+        results = await medium.verify_statements(coarse_pass, topic, evidence=evidence)
+    else:
+        coarse_pass_set = set(coarse_pass)
+        results = [r for r in coarse_results if r["statement"] in coarse_pass_set]
 
     verified: list[str] = []
     flagged: list[str] = []
@@ -277,9 +263,11 @@ async def phase_verify(
             verified.append(r["statement"])
         else:
             flagged.append(r["statement"])
-            logger.debug(
-                "[verify] FLAGGED (%.2f): %s", r["score"], r["statement"][:80]
-            )
+
+    coarse_pass_set = set(coarse_pass)
+    for r in coarse_results:
+        if r["statement"] not in coarse_pass_set:
+            flagged.append(r["statement"])
 
     n_added = memory.add_verified_statements(verified)
     memory.add_flagged(flagged)
@@ -291,8 +279,6 @@ async def phase_verify(
     return verified, flagged
 
 
-# ── Phase 3: Examine (Test + Grade) ───────────────────────────────────────
-
 async def phase_examine(
     topic: str,
     cycle: int,
@@ -302,15 +288,6 @@ async def phase_examine(
     small: SmallAgent,
     cfg: DreamConfig,
 ) -> dict[str, Any]:
-    """
-    Full test cycle:
-      1. Cloud creates test + answer key
-      2. Answer key sent to small (grader); student gets questions only
-      3. Medium takes the test
-      4. Small grades; medium reflects on mistakes
-
-    Returns the grade report dict.
-    """
     t0 = time.perf_counter()
     kb = memory.knowledge_base
     weak = memory.weak_areas
@@ -321,7 +298,6 @@ async def phase_examine(
     )
     evidence = memory.evidence_block(cfg.research_max_context_chars) if cfg.research_enabled else ""
 
-    # 3a — Cloud creates test
     logger.info("[examine] cloud creating test...")
     test_data = await cloud.create_test(
         topic=topic,
@@ -340,11 +316,9 @@ async def phase_examine(
         return {"score": 0.0, "correct": 0, "total": 0, "passed": False,
                 "per_question": {}, "concept_gaps": [], "error": "no questions"}
 
-    # 3b — Dispatch answer key to small (grader)
     small.store_answer_key(answer_key)
     logger.info("[examine] answer key stored in small agent (%d answers)", len(answer_key))
 
-    # 3c — Medium takes the test (no answer key in context)
     await asyncio.sleep(cfg.local_inference_cooldown)
     logger.info("[examine] medium taking test (%d questions)...", len(questions))
     student_answers = await medium.take_test(
@@ -353,7 +327,6 @@ async def phase_examine(
         knowledge_base=kb,
     )
 
-    # 3d — Small grades
     await asyncio.sleep(cfg.local_inference_cooldown)
     logger.info("[examine] small grading...")
     grade_report = await small.grade(
@@ -362,7 +335,6 @@ async def phase_examine(
         student_answers=student_answers,
     )
 
-    # 3e — Medium reflects on mistakes (async, fire-and-capture)
     await asyncio.sleep(cfg.local_inference_cooldown)
     reflection = await medium.reflect(topic, grade_report)
     if reflection:
@@ -377,8 +349,6 @@ async def phase_examine(
     return grade_report
 
 
-# ── Phase 4: Adapt ─────────────────────────────────────────────────────────
-
 async def phase_adapt(
     topic: str,
     cycle: int,
@@ -387,11 +357,7 @@ async def phase_adapt(
     cloud: CloudAgent,
     cfg: DreamConfig,
 ) -> None:
-    """
-    Cloud analyses the grade report and updates the curriculum (weak_areas).
-    Updates DreamMemory in-place, no return value.
-    """
-    history = memory.cycle_history[-5:]  # last 5 for context
+    history = memory.cycle_history[-5:]
 
     if grade_report.get("passed"):
         memory.increment_retry()
